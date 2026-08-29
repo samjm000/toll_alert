@@ -10,16 +10,16 @@ type Props = NativeStackScreenProps<OnboardingStackParamList, 'HowItWorks'>;
 
 const STEPS = [
   {
-    title: 'Runs quietly in the background',
-    body: 'Toll Alert uses your location in the background to notice when you enter a monitored crossing or charging zone — you don’t need the app open.',
+    title: 'It detects the crossing',
+    body: 'Toll Alert notices when you’ve crossed the bridge, tunnel, or toll road — running in the background, even with the app closed.',
   },
   {
-    title: 'Alerts you the moment you cross',
-    body: 'A notification appears reminding you which charge applies and a link to pay it.',
+    title: 'It sends you an alert',
+    body: 'A phone notification reminds you straight away which charge applies, with a link to pay it.',
   },
   {
-    title: 'You confirm payment yourself',
-    body: 'Tapping "Paid" just dismisses the reminder. Toll Alert doesn’t check with Dart Charge or TfL — you’re confirming, not proving, that you’ve paid.',
+    title: 'You tap "Paid" once you have',
+    body: 'That turns the reminder off. Toll Alert doesn’t check with Dart Charge or TfL — tapping "Paid" just tells the app you’ve paid, it doesn’t prove it.',
   },
 ];
 
