@@ -33,6 +33,9 @@ export function SettingsScreen({ navigation }: Props) {
           </Text>
           {MOCK_CROSSINGS_CONFIG.crossings.map((c) => (
             <Card key={c.id} style={styles.crossingRow}>
+              <View style={styles.typeIcon}>
+                <Text style={styles.typeIconText}>{c.type === 'point' ? '🌉' : '⬤'}</Text>
+              </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.crossingName}>{c.name}</Text>
                 <Text style={styles.crossingMeta}>{c.price.label}</Text>
@@ -87,6 +90,15 @@ const styles = StyleSheet.create({
   permRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   permLabel: { fontSize: 14, color: colors.text },
   chevron: { fontSize: 20, color: colors.textMuted },
+  typeIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: radii.md,
+    backgroundColor: colors.primarySoftBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  typeIconText: { fontSize: 14, color: colors.primaryDeep },
   placeholderTag: {
     alignSelf: 'flex-start',
     backgroundColor: colors.warningBg,

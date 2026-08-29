@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: colors.primary,
+    borderColor: colors.primaryDeep,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   checkboxMark: {
-    color: '#fff',
+    color: colors.ink,
     fontWeight: '800',
     fontSize: 14,
   },

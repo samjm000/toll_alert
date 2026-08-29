@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stepNumberText: {
-    color: '#fff',
+    color: colors.ink,
     fontWeight: '700',
   },
   stepText: {

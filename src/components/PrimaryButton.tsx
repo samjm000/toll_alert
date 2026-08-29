@@ -27,6 +27,7 @@ export function PrimaryButton({ label, onPress, variant = 'primary', disabled, s
       <Text
         style={[
           styles.label,
+          variant === 'primary' && styles.labelPrimary,
           variant === 'secondary' && styles.labelSecondary,
         ]}
       >
@@ -47,7 +48,7 @@ const styles = StyleSheet.create({
   primary: {
     backgroundColor: colors.primary,
     shadowColor: colors.primaryDeep,
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.3,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 5 },
     elevation: 3,
@@ -69,7 +70,10 @@ const styles = StyleSheet.create({
   label: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  labelPrimary: {
+    color: colors.ink,
   },
   labelSecondary: {
     color: colors.text,

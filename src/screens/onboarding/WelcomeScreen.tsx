@@ -18,9 +18,10 @@ export function WelcomeScreen({ navigation }: Props) {
         end={gradient.end}
         style={styles.hero}
       >
-        <SafeAreaView edges={['top']}>
-          <Logo size={64} variant="white" />
+        <SafeAreaView style={styles.heroInner} edges={['top']}>
+          <Logo size={116} variant="full" />
           <Text style={styles.wordmark}>Toll Alert</Text>
+          <Text style={styles.tagline}>Drive on. We'll watch the crossings.</Text>
         </SafeAreaView>
       </LinearGradient>
 
@@ -42,18 +43,27 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   hero: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl * 1.4,
+    paddingBottom: spacing.xl * 1.6,
     paddingTop: spacing.sm,
     borderBottomLeftRadius: spacing.xl,
     borderBottomRightRadius: spacing.xl,
-    gap: spacing.sm,
+  },
+  heroInner: {
+    alignItems: 'center',
+    paddingTop: spacing.lg,
+    gap: spacing.xs,
   },
   wordmark: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '800',
     color: colors.textOnDark,
     letterSpacing: 0.2,
     marginTop: spacing.sm,
+  },
+  tagline: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textOnDarkMuted,
   },
   body: {
     flex: 1,
@@ -67,8 +77,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
     padding: spacing.lg,
     gap: spacing.md,
-    shadowColor: '#0B1440',
-    shadowOpacity: 0.08,
+    shadowColor: '#3A2E0A',
+    shadowOpacity: 0.1,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
     elevation: 3,

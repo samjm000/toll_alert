@@ -2,15 +2,16 @@ import { Image, StyleSheet } from 'react-native';
 
 interface Props {
   size?: number;
-  variant?: 'brand' | 'white';
+  /** 'badge' = compact bell-only circular mark (headers, nav). 'full' = detailed square icon (hero moments). */
+  variant?: 'badge' | 'full';
 }
 
 const SOURCES = {
-  brand: require('../../assets/logo-mark.png'),
-  white: require('../../assets/logo-mark-white.png'),
+  badge: require('../../assets/logo-mark.png'),
+  full: require('../../assets/icon.png'),
 };
 
-export function Logo({ size = 40, variant = 'brand' }: Props) {
+export function Logo({ size = 40, variant = 'badge' }: Props) {
   return (
     <Image
       source={SOURCES[variant]}

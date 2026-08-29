@@ -1,27 +1,36 @@
 export const colors = {
-  background: '#F5F7FC',
+  background: '#FBF7EE',
   surface: '#FFFFFF',
-  primary: '#2F6FED',
-  primaryDeep: '#16214F',
-  primarySoftBg: '#E9EFFE',
-  accent: '#F5A524',
-  accentBg: '#FDF0DA',
-  text: '#12142B',
-  textMuted: '#5C6178',
-  textOnDark: '#F5F7FC',
-  textOnDarkMuted: 'rgba(245, 247, 252, 0.72)',
-  border: '#E5E8F2',
-  success: '#1C9A5B',
-  successBg: '#E6F6ED',
-  warning: '#B8790B',
-  warningBg: '#FDF0DA',
-  danger: '#C4342F',
-  dangerBg: '#FBEAE9',
+  ink: '#17140F',
+  primary: '#F3B815',
+  primaryPressed: '#D9A20A',
+  primaryDeep: '#7A4B06',
+  primarySoftBg: '#FFF1CC',
+  accent: '#F3B815',
+  accentBg: '#FFF1CC',
+  text: '#1B1912',
+  textMuted: '#756B54',
+  textOnDark: '#FBF7EE',
+  textOnDarkMuted: 'rgba(251, 247, 238, 0.72)',
+  border: '#EBE2CB',
+  success: '#1E9E6B',
+  successBg: '#E4F5EC',
+  warning: '#9A6B0A',
+  warningBg: '#FFF1CC',
+  danger: '#D93025',
+  dangerBg: '#FBE7E5',
 };
 
-/** Diagonal brand gradient — matches the app icon / logo mark. */
+/** "Light at the end of the tunnel" brand gradient — matches the app icon. */
 export const gradient = {
-  colors: ['#16214F', '#1D3FBF', '#2F6FED'] as const,
+  colors: ['#17140F', '#7A4B06', '#F3B815'] as const,
+  start: { x: 0, y: 0 },
+  end: { x: 0, y: 1 },
+};
+
+/** Darker two-stop variant for banners/surfaces that need light text throughout. */
+export const gradientDark = {
+  colors: ['#17140F', '#4A2E06'] as const,
   start: { x: 0, y: 0 },
   end: { x: 1, y: 1 },
 };
@@ -43,10 +52,17 @@ export const radii = {
 
 export const shadow = {
   card: {
-    shadowColor: '#0B1440',
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
+    shadowColor: '#3A2E0A',
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 5 },
     elevation: 2,
+  },
+  gold: {
+    shadowColor: '#D9A20A',
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
 };
