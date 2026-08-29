@@ -8,6 +8,19 @@ import { OnboardingStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'HowItWorks'>;
 
+const STATS = [
+  {
+    number: '2,130,392',
+    body: "ULEZ penalty charge notices were issued in the year to September 2024 — Toll Alert helps make sure you're never one of them.",
+    source: 'Source: Mayor of London / TfL, FOI response to the London Assembly',
+  },
+  {
+    number: '500,000+',
+    body: 'Dart Charge fines were issued in a single month in 2023, after a system changeover caused widespread payment issues at the Dartford Crossing.',
+    source: 'Source: FleetNews',
+  },
+];
+
 const STEPS = [
   {
     title: 'It detects the crossing',
@@ -42,14 +55,13 @@ export function HowItWorksScreen({ navigation }: Props) {
           </Card>
         ))}
 
-        <Card style={styles.statCard}>
-          <Text style={styles.statNumber}>2,130,392</Text>
-          <Text style={styles.statBody}>
-            ULEZ penalty charge notices were issued in the year to September 2024 — Toll Alert
-            helps make sure you're never one of them.
-          </Text>
-          <Text style={styles.statSource}>Source: Mayor of London / TfL, FOI response to the London Assembly</Text>
-        </Card>
+        {STATS.map((stat) => (
+          <Card key={stat.number} style={styles.statCard}>
+            <Text style={styles.statNumber}>{stat.number}</Text>
+            <Text style={styles.statBody}>{stat.body}</Text>
+            <Text style={styles.statSource}>{stat.source}</Text>
+          </Card>
+        ))}
       </ScrollView>
       <PrimaryButton label="Continue" onPress={() => navigation.navigate('Disclaimer')} />
     </SafeAreaView>
