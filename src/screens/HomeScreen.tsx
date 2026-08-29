@@ -15,7 +15,7 @@ import { MOCK_CROSSINGS_CONFIG } from '../config/crossings';
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 export function HomeScreen({ navigation }: Props) {
-  const { subscription, crossingEvents, simulateCrossing } = useAppState();
+  const { subscription, crossingEvents, simulateCrossing, resetOnboarding } = useAppState();
 
   const pendingEvents = crossingEvents.filter((e) => e.status === 'pending');
   const isLive = subscription.status === 'active';
@@ -138,6 +138,10 @@ export function HomeScreen({ navigation }: Props) {
             </Card>
           ))}
         </View>
+
+        <Pressable onPress={resetOnboarding} style={styles.replayIntroButton}>
+          <Text style={styles.replayIntroText}>↺ Replay intro (demo)</Text>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -195,4 +199,6 @@ const styles = StyleSheet.create({
   statusDotIdle: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.border },
   statusLine: { fontSize: 13, color: colors.textMuted },
   devLink: { fontSize: 13, color: colors.warning, fontWeight: '700', marginTop: 4 },
+  replayIntroButton: { alignItems: 'center', paddingVertical: spacing.sm },
+  replayIntroText: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
 });
