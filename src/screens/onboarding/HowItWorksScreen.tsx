@@ -41,6 +41,15 @@ export function HowItWorksScreen({ navigation }: Props) {
             </View>
           </Card>
         ))}
+
+        <Card style={styles.statCard}>
+          <Text style={styles.statNumber}>2,130,392</Text>
+          <Text style={styles.statBody}>
+            ULEZ penalty charge notices were issued in the year to September 2024 — Toll Alert
+            helps make sure you're never one of them.
+          </Text>
+          <Text style={styles.statSource}>Source: Mayor of London / TfL, FOI response to the London Assembly</Text>
+        </Card>
       </ScrollView>
       <PrimaryButton label="Continue" onPress={() => navigation.navigate('Disclaimer')} />
     </SafeAreaView>
@@ -95,5 +104,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textMuted,
     lineHeight: 20,
+  },
+  statCard: {
+    backgroundColor: colors.primarySoftBg,
+    borderColor: colors.primarySoftBg,
+    marginTop: spacing.xs,
+  },
+  statNumber: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: colors.primaryDeep,
+  },
+  statBody: {
+    fontSize: 14,
+    color: colors.text,
+    lineHeight: 20,
+    marginTop: 4,
+  },
+  statSource: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: spacing.sm,
   },
 });
