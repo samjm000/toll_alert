@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { colors, radii, spacing } from '../../theme';
+import { colors, spacing } from '../../theme';
 import { OnboardingStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'Disclaimer'>;
@@ -29,9 +29,6 @@ export function DisclaimerScreen({ navigation }: Props) {
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.title}>Before you continue</Text>
         <Card>
-          <View style={styles.placeholderTag}>
-            <Text style={styles.placeholderTagText}>PLACEHOLDER — LEGAL WORDING TBD</Text>
-          </View>
           <Text style={styles.disclaimerText}>{DISCLAIMER_TEXT}</Text>
         </Card>
 
@@ -74,20 +71,6 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: '800',
     color: colors.text,
-  },
-  placeholderTag: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.warningBg,
-    borderRadius: radii.sm,
-    paddingVertical: 4,
-    paddingHorizontal: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  placeholderTagText: {
-    color: colors.warning,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.3,
   },
   disclaimerText: {
     fontSize: 15,

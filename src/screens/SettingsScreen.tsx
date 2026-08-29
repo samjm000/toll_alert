@@ -59,10 +59,8 @@ export function SettingsScreen({ navigation }: Props) {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Legal</Text>
+          {/* PLACEHOLDER LEGAL COPY — not final, must be reviewed by a solicitor before launch. */}
           <Card>
-            <View style={styles.placeholderTag}>
-              <Text style={styles.placeholderTagText}>PLACEHOLDER — TBD BY SOLICITOR</Text>
-            </View>
             <Text style={styles.legalBody}>
               This app is a reminder tool, not a guarantee. You are fully responsible for paying
               your own tolls and charges regardless of whether you receive an alert. Full terms
@@ -99,15 +97,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   typeIconText: { fontSize: 14, color: colors.primaryDeep },
-  placeholderTag: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.warningBg,
-    borderRadius: radii.sm,
-    paddingVertical: 4,
-    paddingHorizontal: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  placeholderTagText: { color: colors.warning, fontSize: 11, fontWeight: '700', letterSpacing: 0.3 },
   legalBody: { fontSize: 13, color: colors.textMuted, lineHeight: 19 },
   version: { fontSize: 12, color: colors.textMuted, textAlign: 'center', marginTop: spacing.md },
 });
