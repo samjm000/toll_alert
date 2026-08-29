@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '../components/Card';
 import { Logo } from '../components/Logo';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { PulsingDot } from '../components/PulsingDot';
 import { StatusPill } from '../components/StatusPill';
 import { colors, gradientDark, radii, shadow, spacing } from '../theme';
 import { RootStackParamList } from '../navigation/types';
@@ -17,6 +18,7 @@ export function HomeScreen({ navigation }: Props) {
   const { subscription, crossingEvents, simulateCrossing } = useAppState();
 
   const pendingEvents = crossingEvents.filter((e) => e.status === 'pending');
+  const isLive = subscription.status === 'active';
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -26,7 +28,14 @@ export function HomeScreen({ navigation }: Props) {
             <Logo size={36} />
             <View>
               <Text style={styles.title}>Toll Alert</Text>
-              <Text style={styles.subtitle}>Watching 2 crossings</Text>
+              {isLive ? (
+                <View style={styles.liveRow}>
+                  <PulsingDot color={colors.success} size={7} />
+                  <Text style={styles.liveText}>Live tracking active</Text>
+                </View>
+              ) : (
+                <Text style={styles.subtitle}>Watching 2 crossings</Text>
+              )}
             </View>
           </View>
           <Pressable
@@ -111,8 +120,17 @@ export function HomeScreen({ navigation }: Props) {
                 />
               </View>
               <View style={styles.statusRow}>
-                <View style={styles.statusDot} />
-                <Text style={styles.statusLine}>Not currently in this crossing</Text>
+                {isLive ? (
+                  <>
+                    <PulsingDot color={colors.success} size={6} />
+                    <Text style={styles.statusLine}>Live — not currently in this crossing</Text>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.statusDotIdle} />
+                    <Text style={styles.statusLine}>Tracking paused — subscribe to enable</Text>
+                  </>
+                )}
               </View>
               <Pressable onPress={() => simulateCrossing(crossing.id)}>
                 <Text style={styles.devLink}>▸ Simulate crossing (demo)</Text>
@@ -136,6 +154,8 @@ const styles = StyleSheet.create({
   headerLockup: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   title: { fontSize: 22, fontWeight: '800', color: colors.text },
   subtitle: { fontSize: 13, color: colors.textMuted, marginTop: 1 },
+  liveRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
+  liveText: { fontSize: 13, color: colors.success, fontWeight: '700' },
   settingsButton: {
     width: 40,
     height: 40,
@@ -172,7 +192,7 @@ const styles = StyleSheet.create({
   },
   typeIconText: { fontSize: 15, color: colors.primaryDeep },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.success },
+  statusDotIdle: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.border },
   statusLine: { fontSize: 13, color: colors.textMuted },
   devLink: { fontSize: 13, color: colors.warning, fontWeight: '700', marginTop: 4 },
 });
