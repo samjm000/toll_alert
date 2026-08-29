@@ -1,5 +1,20 @@
 # Toll Alert
 
+## View it online
+
+This mockup auto-deploys to GitHub Pages on every push via
+`.github/workflows/deploy-pages.yml`. **One-time manual step needed**
+(GitHub doesn't allow enabling this via API/automation): go to this repo's
+**Settings → Pages** and set **Source** to **GitHub Actions**. After that,
+every push re-deploys automatically and it's live at:
+
+**https://samjm000.github.io/toll_alert/**
+
+(If the repo is private, GitHub Pages requires a paid plan to publish
+outside the org — make the repo public, or upgrade, for the link above to
+be reachable by anyone without being signed in as a collaborator.)
+
+
 Reminds you to pay UK toll crossings and charging zones you've driven into
 — Dartford Crossing and the London ULEZ for v1 — via a background local
 notification, with a self-reported "Paid" dismiss button.
