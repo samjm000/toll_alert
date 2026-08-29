@@ -6,10 +6,12 @@ import { StatusPill } from '../components/StatusPill';
 import { colors, radii, spacing } from '../theme';
 import { RootStackParamList } from '../navigation/types';
 import { MOCK_CROSSINGS_CONFIG } from '../config/crossings';
+import { useAppState } from '../state/AppState';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
 export function SettingsScreen({ navigation }: Props) {
+  const { resetOnboarding } = useAppState();
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -67,6 +69,20 @@ export function SettingsScreen({ navigation }: Props) {
               and privacy policy links go here once finalised.
             </Text>
           </Card>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Demo tools</Text>
+          <Pressable onPress={resetOnboarding}>
+            <Card style={styles.permRow}>
+              <Text style={styles.permLabel}>Replay intro</Text>
+              <Text style={styles.chevron}>↺</Text>
+            </Card>
+          </Pressable>
+          <Text style={styles.sectionCaption}>
+            Not a real app screen — jumps back to onboarding so testers can replay it without
+            clearing storage.
+          </Text>
         </View>
 
         <Text style={styles.version}>Toll Alert — UI mockup build</Text>

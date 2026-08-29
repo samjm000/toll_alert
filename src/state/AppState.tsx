@@ -17,6 +17,8 @@ interface AppState {
   onboardingComplete: boolean;
   onboardingLoaded: boolean;
   completeOnboarding: () => void;
+  /** DEMO ONLY — lets testers replay the intro flow without clearing browser/app storage. */
+  resetOnboarding: () => void;
 
   subscription: SubscriptionState;
   /** DEMO ONLY — stands in for a completed StoreKit / Play Billing purchase. */
@@ -47,6 +49,11 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const completeOnboarding = useCallback(() => {
     setOnboardingComplete(true);
     AsyncStorage.setItem(ONBOARDING_KEY, 'true').catch(() => {});
+  }, []);
+
+  const resetOnboarding = useCallback(() => {
+    setOnboardingComplete(false);
+    AsyncStorage.removeItem(ONBOARDING_KEY).catch(() => {});
   }, []);
 
   const mockSubscribe = useCallback(() => {
@@ -86,6 +93,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       onboardingComplete,
       onboardingLoaded,
       completeOnboarding,
+      resetOnboarding,
       subscription,
       mockSubscribe,
       mockExpireSubscription,
@@ -97,6 +105,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       onboardingComplete,
       onboardingLoaded,
       completeOnboarding,
+      resetOnboarding,
       subscription,
       mockSubscribe,
       mockExpireSubscription,
