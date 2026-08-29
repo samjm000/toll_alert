@@ -2,9 +2,10 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '../components/Card';
+import { Logo } from '../components/Logo';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { StatusPill } from '../components/StatusPill';
-import { colors, spacing } from '../theme';
+import { colors, radii, spacing } from '../theme';
 import { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../state/AppState';
 import { MOCK_CROSSINGS_CONFIG } from '../config/crossings';
@@ -20,11 +21,18 @@ export function HomeScreen({ navigation }: Props) {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>Toll Alert</Text>
-            <Text style={styles.subtitle}>Watching 2 crossings</Text>
+          <View style={styles.headerLockup}>
+            <Logo size={36} />
+            <View>
+              <Text style={styles.title}>Toll Alert</Text>
+              <Text style={styles.subtitle}>Watching 2 crossings</Text>
+            </View>
           </View>
-          <Pressable onPress={() => navigation.navigate('Settings')} hitSlop={12}>
+          <Pressable
+            onPress={() => navigation.navigate('Settings')}
+            hitSlop={12}
+            style={styles.settingsButton}
+          >
             <Text style={styles.settingsIcon}>⚙️</Text>
           </Pressable>
         </View>
@@ -112,10 +120,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  title: { fontSize: 26, fontWeight: '800', color: colors.text },
-  subtitle: { fontSize: 14, color: colors.textMuted, marginTop: 2 },
-  settingsIcon: { fontSize: 22 },
-  subBanner: { backgroundColor: colors.warningBg, borderColor: colors.warningBg },
+  headerLockup: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  title: { fontSize: 22, fontWeight: '800', color: colors.text },
+  subtitle: { fontSize: 13, color: colors.textMuted, marginTop: 1 },
+  settingsButton: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.lg,
+    backgroundColor: colors.primarySoftBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  settingsIcon: { fontSize: 18 },
+  subBanner: { backgroundColor: colors.accentBg, borderColor: colors.accentBg },
   subBannerTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
   subBannerBody: { fontSize: 14, color: colors.textMuted, marginTop: 4, lineHeight: 20 },
   section: { gap: spacing.sm },

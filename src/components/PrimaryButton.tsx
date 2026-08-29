@@ -40,12 +40,17 @@ const styles = StyleSheet.create({
   base: {
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    borderRadius: radii.md,
+    borderRadius: radii.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   primary: {
     backgroundColor: colors.primary,
+    shadowColor: colors.primaryDeep,
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 3,
   },
   secondary: {
     backgroundColor: colors.surface,
