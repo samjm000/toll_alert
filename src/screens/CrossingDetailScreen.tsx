@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  typeBadgeText: { fontSize: 20, color: colors.primaryDeep },
+  typeBadgeText: { fontSize: 20, color: colors.primary },
   title: { fontSize: 26, fontWeight: '800', color: colors.text },
   subtitle: { fontSize: 14, color: colors.textMuted },
   priceCard: { gap: 4, borderLeftWidth: 4, borderLeftColor: colors.primary },

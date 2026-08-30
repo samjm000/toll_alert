@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: colors.primaryDeep,
+    borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,

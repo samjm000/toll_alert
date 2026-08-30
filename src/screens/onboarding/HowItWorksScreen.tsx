@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 28,
     fontWeight: '800',
-    color: colors.primaryDeep,
+    color: colors.primary,
   },
   statBody: {
     fontSize: 14,

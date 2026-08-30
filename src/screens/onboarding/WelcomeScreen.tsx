@@ -1,10 +1,10 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Logo } from '../../components/Logo';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { colors, radii, spacing } from '../../theme';
+import { colors, radii, shadow, spacing } from '../../theme';
 import { OnboardingStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'Welcome'>;
@@ -12,8 +12,8 @@ type Props = NativeStackScreenProps<OnboardingStackParamList, 'Welcome'>;
 const DEMO_VISIBLE_MS = 4500;
 
 const WARNING_STATS = [
-  '2,130,392 ULEZ fines issued last year',
-  '500,000+ Dart Charge fines in one month',
+  { number: '2,130,392', label: 'ULEZ fines issued last year' },
+  { number: '500,000+', label: 'Dart Charge fines in one month' },
 ];
 
 export function WelcomeScreen({ navigation }: Props) {
@@ -23,6 +23,7 @@ export function WelcomeScreen({ navigation }: Props) {
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const nextStat = () => setStatIndex((i) => (i + 1) % WARNING_STATS.length);
+  const stat = WARNING_STATS[statIndex];
 
   const hideDemo = () => {
     Animated.timing(slideAnim, { toValue: -160, duration: 250, useNativeDriver: true }).start(() => {
@@ -40,24 +41,30 @@ export function WelcomeScreen({ navigation }: Props) {
 
   return (
     <View style={styles.root}>
-      <View style={styles.hero}>
+      <ScrollView contentContainerStyle={styles.scroll} bounces={false}>
         <SafeAreaView style={styles.heroInner} edges={['top']}>
-          <Logo size={104} variant="full" />
+          <Logo size={92} variant="full" />
           <Text style={styles.wordmark}>Avoid the penalty charge</Text>
           <Text style={styles.tagline}>Drive on. We'll watch the crossings.</Text>
         </SafeAreaView>
-      </View>
 
-      <SafeAreaView style={styles.body} edges={['bottom']}>
-        <View style={styles.content}>
-          <Pressable style={styles.warningChip} onPress={nextStat}>
-            <Text style={styles.warningChipText} numberOfLines={1}>
-              ⚠️ {WARNING_STATS[statIndex]}
-            </Text>
-            <View style={styles.warningChipNext}>
-              <Text style={styles.warningChipNextText}>›</Text>
+        <Pressable style={styles.statCard} onPress={nextStat}>
+          <View style={styles.statBadgeRow}>
+            <Text style={styles.statBadge}>⚠️ FINES ISSUED</Text>
+            <View style={styles.statNextButton}>
+              <Text style={styles.statNextText}>NEXT ›</Text>
             </View>
-          </Pressable>
+          </View>
+          <Text style={styles.statNumber}>{stat.number}</Text>
+          <Text style={styles.statLabel}>{stat.label}</Text>
+          <View style={styles.statDots}>
+            {WARNING_STATS.map((s, i) => (
+              <View key={s.number} style={[styles.statDot, i === statIndex && styles.statDotActive]} />
+            ))}
+          </View>
+        </Pressable>
+
+        <View style={styles.content}>
           <Text style={styles.title}>One missed crossing. One nasty fine.</Text>
           <Text style={styles.copy}>
             Toll Alert watches Dartford Crossing and the London ULEZ in the background and warns
@@ -67,6 +74,9 @@ export function WelcomeScreen({ navigation }: Props) {
             <Text style={styles.demoButtonText}>🔔 See what an alert looks like</Text>
           </Pressable>
         </View>
+      </ScrollView>
+
+      <SafeAreaView style={styles.footer} edges={['bottom']}>
         <PrimaryButton label="Get started" onPress={() => navigation.navigate('HowItWorks')} />
       </SafeAreaView>
 
@@ -100,86 +110,93 @@ export function WelcomeScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  hero: {
-    backgroundColor: colors.primaryDeep,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl * 1.6,
-    paddingTop: spacing.sm,
-    borderBottomLeftRadius: spacing.xl,
-    borderBottomRightRadius: spacing.xl,
-  },
+  scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md, gap: spacing.md },
   heroInner: {
     alignItems: 'center',
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
     gap: spacing.xs,
   },
   wordmark: {
-    fontSize: 26,
+    fontSize: 25,
     fontWeight: '800',
-    color: colors.textOnDark,
+    color: colors.text,
     letterSpacing: 0.2,
     marginTop: spacing.sm,
+    textAlign: 'center',
   },
   tagline: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.textOnDarkMuted,
+    color: colors.textMuted,
   },
-  body: {
-    flex: 1,
-    marginTop: -spacing.xl,
-    paddingHorizontal: spacing.lg,
+  statCard: {
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.xl,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    padding: spacing.lg,
+    marginTop: spacing.md,
+    ...shadow.gold,
+  },
+  statBadgeRow: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingBottom: spacing.lg,
+    alignItems: 'center',
+  },
+  statBadge: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.danger,
+    letterSpacing: 0.6,
+  },
+  statNextButton: {
+    backgroundColor: colors.primarySoftBg,
+    borderRadius: radii.sm,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+  },
+  statNextText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.primary,
+    letterSpacing: 0.4,
+  },
+  statNumber: {
+    fontSize: 44,
+    fontWeight: '900',
+    color: colors.primary,
+    marginTop: spacing.sm,
+    letterSpacing: -0.5,
+  },
+  statLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+    marginTop: 2,
+  },
+  statDots: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: spacing.md,
+  },
+  statDot: {
+    width: 20,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+  },
+  statDotActive: {
+    backgroundColor: colors.primary,
   },
   content: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.xl,
-    padding: spacing.lg,
     gap: spacing.sm,
-    shadowColor: '#3A2E0A',
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
-  },
-  warningChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    maxWidth: '100%',
-    backgroundColor: colors.dangerBg,
-    borderRadius: radii.sm,
-    paddingVertical: 4,
-    paddingLeft: spacing.sm,
-    paddingRight: 4,
-    gap: 4,
-  },
-  warningChipText: {
-    flexShrink: 1,
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.danger,
-  },
-  warningChipNext: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: colors.danger,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  warningChipNextText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginTop: -1,
+    marginTop: spacing.md,
   },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '800',
     color: colors.text,
-    lineHeight: 34,
+    lineHeight: 32,
   },
   copy: {
     fontSize: 15,
@@ -193,7 +210,13 @@ const styles = StyleSheet.create({
   demoButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: colors.primaryDeep,
+    color: colors.primary,
+  },
+  footer: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.background,
   },
   notification: {
     position: 'absolute',
@@ -205,12 +228,14 @@ const styles = StyleSheet.create({
   notificationCard: {
     flexDirection: 'row',
     gap: spacing.sm,
-    backgroundColor: 'rgba(23, 20, 15, 0.96)',
+    backgroundColor: 'rgba(8, 6, 4, 0.97)',
     borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: spacing.md,
     marginTop: spacing.xs,
     shadowColor: '#000',
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.5,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 6 },
     elevation: 8,

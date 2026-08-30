@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  typeIconText: { fontSize: 15, color: colors.primaryDeep },
+  typeIconText: { fontSize: 15, color: colors.primary },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   statusDotIdle: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.border },
   statusLine: { fontSize: 13, color: colors.textMuted },

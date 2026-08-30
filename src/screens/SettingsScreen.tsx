@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  typeIconText: { fontSize: 14, color: colors.primaryDeep },
+  typeIconText: { fontSize: 14, color: colors.primary },
   legalBody: { fontSize: 13, color: colors.textMuted, lineHeight: 19 },
   version: { fontSize: 12, color: colors.textMuted, textAlign: 'center', marginTop: spacing.md },
 });

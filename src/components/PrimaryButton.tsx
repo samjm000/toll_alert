@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, ViewStyle } from 'react-native';
-import { colors, radii, spacing } from '../theme';
+import { colors, radii, shadow, spacing } from '../theme';
 
 interface Props {
   label: string;
@@ -47,11 +47,7 @@ const styles = StyleSheet.create({
   },
   primary: {
     backgroundColor: colors.primary,
-    shadowColor: colors.primaryDeep,
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 3,
+    ...shadow.gold,
   },
   secondary: {
     backgroundColor: colors.surface,
