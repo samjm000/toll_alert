@@ -1,21 +1,28 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Logo } from '../../components/Logo';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { colors, gradient, radii, spacing } from '../../theme';
+import { colors, radii, spacing } from '../../theme';
 import { OnboardingStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'Welcome'>;
 
 const DEMO_VISIBLE_MS = 4500;
 
+const WARNING_STATS = [
+  '2,130,392 ULEZ fines issued last year',
+  '500,000+ Dart Charge fines in one month',
+];
+
 export function WelcomeScreen({ navigation }: Props) {
   const [demoVisible, setDemoVisible] = useState(false);
+  const [statIndex, setStatIndex] = useState(0);
   const slideAnim = useRef(new Animated.Value(-160)).current;
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const nextStat = () => setStatIndex((i) => (i + 1) % WARNING_STATS.length);
 
   const hideDemo = () => {
     Animated.timing(slideAnim, { toValue: -160, duration: 250, useNativeDriver: true }).start(() => {
@@ -33,24 +40,24 @@ export function WelcomeScreen({ navigation }: Props) {
 
   return (
     <View style={styles.root}>
-      <LinearGradient
-        colors={gradient.colors}
-        start={gradient.start}
-        end={gradient.end}
-        style={styles.hero}
-      >
+      <View style={styles.hero}>
         <SafeAreaView style={styles.heroInner} edges={['top']}>
           <Logo size={104} variant="full" />
-          <Text style={styles.wordmark}>Toll Alert</Text>
+          <Text style={styles.wordmark}>Avoid the penalty charge</Text>
           <Text style={styles.tagline}>Drive on. We'll watch the crossings.</Text>
         </SafeAreaView>
-      </LinearGradient>
+      </View>
 
       <SafeAreaView style={styles.body} edges={['bottom']}>
         <View style={styles.content}>
-          <View style={styles.warningChip}>
-            <Text style={styles.warningChipText}>⚠️ 2,130,392 ULEZ fines issued last year</Text>
-          </View>
+          <Pressable style={styles.warningChip} onPress={nextStat}>
+            <Text style={styles.warningChipText} numberOfLines={1}>
+              ⚠️ {WARNING_STATS[statIndex]}
+            </Text>
+            <View style={styles.warningChipNext}>
+              <Text style={styles.warningChipNextText}>›</Text>
+            </View>
+          </Pressable>
           <Text style={styles.title}>One missed crossing. One nasty fine.</Text>
           <Text style={styles.copy}>
             Toll Alert watches Dartford Crossing and the London ULEZ in the background and warns
@@ -94,6 +101,7 @@ export function WelcomeScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   hero: {
+    backgroundColor: colors.primaryDeep,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl * 1.6,
     paddingTop: spacing.sm,
@@ -136,16 +144,36 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   warningChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     alignSelf: 'flex-start',
+    maxWidth: '100%',
     backgroundColor: colors.dangerBg,
     borderRadius: radii.sm,
     paddingVertical: 4,
-    paddingHorizontal: spacing.sm,
+    paddingLeft: spacing.sm,
+    paddingRight: 4,
+    gap: 4,
   },
   warningChipText: {
+    flexShrink: 1,
     fontSize: 12,
     fontWeight: '700',
     color: colors.danger,
+  },
+  warningChipNext: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  warningChipNextText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginTop: -1,
   },
   title: {
     fontSize: 28,
