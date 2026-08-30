@@ -8,19 +8,6 @@ import { OnboardingStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'HowItWorks'>;
 
-const STATS = [
-  {
-    number: '2,130,392',
-    body: "ULEZ penalty charge notices were issued in the year to September 2024 — Toll Alert helps make sure you're never one of them.",
-    source: 'Source: Mayor of London / TfL, FOI response to the London Assembly',
-  },
-  {
-    number: '500,000+',
-    body: 'Dart Charge fines were issued in a single month in 2023, after a system changeover caused widespread payment issues at the Dartford Crossing.',
-    source: 'Source: FleetNews',
-  },
-];
-
 const STEPS = [
   {
     title: 'It detects the crossing',
@@ -52,14 +39,6 @@ export function HowItWorksScreen({ navigation }: Props) {
                 <Text style={styles.stepBody}>{step.body}</Text>
               </View>
             </View>
-          </Card>
-        ))}
-
-        {STATS.map((stat) => (
-          <Card key={stat.number} style={styles.statCard}>
-            <Text style={styles.statNumber}>{stat.number}</Text>
-            <Text style={styles.statBody}>{stat.body}</Text>
-            <Text style={styles.statSource}>{stat.source}</Text>
           </Card>
         ))}
       </ScrollView>
@@ -116,26 +95,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textMuted,
     lineHeight: 20,
-  },
-  statCard: {
-    backgroundColor: colors.primarySoftBg,
-    borderColor: colors.primarySoftBg,
-    marginTop: spacing.xs,
-  },
-  statNumber: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: colors.primary,
-  },
-  statBody: {
-    fontSize: 14,
-    color: colors.text,
-    lineHeight: 20,
-    marginTop: 4,
-  },
-  statSource: {
-    fontSize: 11,
-    color: colors.textMuted,
-    marginTop: spacing.sm,
   },
 });

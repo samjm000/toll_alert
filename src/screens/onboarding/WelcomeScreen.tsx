@@ -2,28 +2,20 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useRef, useState } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { FineStatCard } from '../../components/FineStatCard';
 import { Logo } from '../../components/Logo';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { colors, radii, shadow, spacing } from '../../theme';
+import { colors, radii, spacing } from '../../theme';
 import { OnboardingStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'Welcome'>;
 
 const DEMO_VISIBLE_MS = 4500;
 
-const WARNING_STATS = [
-  { number: '2,130,392', label: 'ULEZ fines issued last year' },
-  { number: '500,000+', label: 'Dart Charge fines in one month' },
-];
-
 export function WelcomeScreen({ navigation }: Props) {
   const [demoVisible, setDemoVisible] = useState(false);
-  const [statIndex, setStatIndex] = useState(0);
   const slideAnim = useRef(new Animated.Value(-160)).current;
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const nextStat = () => setStatIndex((i) => (i + 1) % WARNING_STATS.length);
-  const stat = WARNING_STATS[statIndex];
 
   const hideDemo = () => {
     Animated.timing(slideAnim, { toValue: -160, duration: 250, useNativeDriver: true }).start(() => {
@@ -42,33 +34,34 @@ export function WelcomeScreen({ navigation }: Props) {
   return (
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.scroll} bounces={false}>
-        <SafeAreaView style={styles.heroInner} edges={['top']}>
+        <SafeAreaView edges={['top']} style={styles.progressRow}>
+          <View style={styles.progressDots}>
+            <View style={[styles.progressDot, styles.progressDotActive]} />
+            <View style={styles.progressDot} />
+          </View>
+        </SafeAreaView>
+
+        <View style={styles.heroInner}>
           <Logo size={92} variant="full" />
           <Text style={styles.wordmark}>Avoid the penalty charge</Text>
           <Text style={styles.tagline}>Drive on. We'll watch the crossings.</Text>
-        </SafeAreaView>
+        </View>
 
-        <Pressable style={styles.statCard} onPress={nextStat}>
-          <View style={styles.statBadgeRow}>
-            <Text style={styles.statBadge}>⚠️ FINES ISSUED</Text>
-            <View style={styles.statNextButton}>
-              <Text style={styles.statNextText}>NEXT ›</Text>
-            </View>
-          </View>
-          <Text style={styles.statNumber}>{stat.number}</Text>
-          <Text style={styles.statLabel}>{stat.label}</Text>
-          <View style={styles.statDots}>
-            {WARNING_STATS.map((s, i) => (
-              <View key={s.number} style={[styles.statDot, i === statIndex && styles.statDotActive]} />
-            ))}
-          </View>
-        </Pressable>
+        <View style={styles.statWrap}>
+          <FineStatCard
+            badge="⚠️ DARTFORD CROSSING"
+            number="500,000+"
+            label="Dart Charge fines in one month"
+            source="Source: FleetNews"
+          />
+        </View>
 
         <View style={styles.content}>
-          <Text style={styles.title}>One missed crossing. One nasty fine.</Text>
+          <Text style={styles.title}>No barrier. No excuse.</Text>
           <Text style={styles.copy}>
-            Toll Alert watches Dartford Crossing and the London ULEZ in the background and warns
-            you the moment you cross — even if the app isn't open. No more finding out weeks later.
+            There's no toll booth at the Dartford Crossing — you pay online or by phone, up to
+            midnight the next day. Miss it, and the fine lands anyway. Toll Alert notices the
+            moment you cross and reminds you before it's too late.
           </Text>
           <Pressable onPress={triggerDemo} style={styles.demoButton}>
             <Text style={styles.demoButtonText}>🔔 See what an alert looks like</Text>
@@ -77,7 +70,7 @@ export function WelcomeScreen({ navigation }: Props) {
       </ScrollView>
 
       <SafeAreaView style={styles.footer} edges={['bottom']}>
-        <PrimaryButton label="Get started" onPress={() => navigation.navigate('HowItWorks')} />
+        <PrimaryButton label="Next: the ULEZ" onPress={() => navigation.navigate('UlezIntro')} />
       </SafeAreaView>
 
       {demoVisible && (
@@ -110,7 +103,15 @@ export function WelcomeScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md, gap: spacing.md },
+  scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
+  progressRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingTop: spacing.sm,
+  },
+  progressDots: { flexDirection: 'row', gap: 6 },
+  progressDot: { width: 20, height: 4, borderRadius: 2, backgroundColor: colors.border },
+  progressDotActive: { backgroundColor: colors.primary },
   heroInner: {
     alignItems: 'center',
     paddingTop: spacing.sm,
@@ -129,64 +130,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textMuted,
   },
-  statCard: {
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: radii.xl,
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-    padding: spacing.lg,
+  statWrap: {
     marginTop: spacing.md,
-    ...shadow.gold,
-  },
-  statBadgeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  statBadge: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: colors.danger,
-    letterSpacing: 0.6,
-  },
-  statNextButton: {
-    backgroundColor: colors.primarySoftBg,
-    borderRadius: radii.sm,
-    paddingVertical: 3,
-    paddingHorizontal: 8,
-  },
-  statNextText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: colors.primary,
-    letterSpacing: 0.4,
-  },
-  statNumber: {
-    fontSize: 44,
-    fontWeight: '900',
-    color: colors.primary,
-    marginTop: spacing.sm,
-    letterSpacing: -0.5,
-  },
-  statLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.text,
-    marginTop: 2,
-  },
-  statDots: {
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: spacing.md,
-  },
-  statDot: {
-    width: 20,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.border,
-  },
-  statDotActive: {
-    backgroundColor: colors.primary,
   },
   content: {
     gap: spacing.sm,
