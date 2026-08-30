@@ -42,10 +42,10 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
     color: colors.text,
-    marginTop: 2,
+    marginTop: 4,
   },
   source: {
     fontSize: 11,

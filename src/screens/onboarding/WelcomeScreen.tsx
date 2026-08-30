@@ -1,5 +1,5 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FineStatCard } from '../../components/FineStatCard';
@@ -11,11 +11,48 @@ import { OnboardingStackParamList } from '../../navigation/types';
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'Welcome'>;
 
 const DEMO_VISIBLE_MS = 4500;
+const STAT_ROTATE_MS = 10000;
+
+const STATS = [
+  {
+    badge: '⚠️ DARTFORD CROSSING',
+    number: '500,000+',
+    label: 'Dart Charge fines in one month',
+    source: 'Source: FleetNews',
+  },
+  {
+    badge: '⚠️ THE ULEZ',
+    number: '2,130,392',
+    label: 'ULEZ fines issued last year',
+    source: 'Source: Mayor of London / TfL, FOI response to the London Assembly',
+  },
+  {
+    badge: '⚠️ CONGESTION CHARGE',
+    number: '817,000+',
+    label: 'Congestion Charge fines in one year',
+    source: 'Source: FleetNews, TfL data (12 months to Sept 2020)',
+  },
+];
+
+const FEATURES = [
+  { icon: '📍', text: "Detects when you've travelled through a toll zone" },
+  { icon: '🔔', text: 'Sends you a reminder to pay' },
+  { icon: '📅', text: 'Keeps you updated before your payment deadline' },
+  { icon: '💷', text: 'Helps you avoid costly fines' },
+];
 
 export function WelcomeScreen({ navigation }: Props) {
   const [demoVisible, setDemoVisible] = useState(false);
   const slideAnim = useRef(new Animated.Value(-160)).current;
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [statIndex, setStatIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStatIndex((i) => (i + 1) % STATS.length);
+    }, STAT_ROTATE_MS);
+    return () => clearInterval(interval);
+  }, []);
 
   const hideDemo = () => {
     Animated.timing(slideAnim, { toValue: -160, duration: 250, useNativeDriver: true }).start(() => {
@@ -42,27 +79,27 @@ export function WelcomeScreen({ navigation }: Props) {
         </SafeAreaView>
 
         <View style={styles.heroInner}>
-          <Logo size={92} variant="full" />
-          <Text style={styles.wordmark}>Avoid the penalty charge</Text>
-          <Text style={styles.tagline}>Drive on. We'll watch the crossings.</Text>
+          <Logo size={140} variant="full" />
+          <Text style={styles.wordmark}>Never forget a UK road charge again</Text>
         </View>
 
         <View style={styles.statWrap}>
           <FineStatCard
-            badge="⚠️ DARTFORD CROSSING"
-            number="500,000+"
-            label="Dart Charge fines in one month"
-            source="Source: FleetNews"
+            badge={STATS[statIndex].badge}
+            number={STATS[statIndex].number}
+            label={STATS[statIndex].label}
+            source={STATS[statIndex].source}
           />
         </View>
 
         <View style={styles.content}>
-          <Text style={styles.title}>No barrier. No excuse.</Text>
-          <Text style={styles.copy}>
-            There's no toll booth at the Dartford Crossing — you pay online or by phone, up to
-            midnight the next day. Miss it, and the fine lands anyway. Toll Alert notices the
-            moment you cross and reminds you before it's too late.
-          </Text>
+          <Text style={styles.title}>How it works</Text>
+          {FEATURES.map((feature) => (
+            <View key={feature.text} style={styles.featureRow}>
+              <Text style={styles.featureIcon}>{feature.icon}</Text>
+              <Text style={styles.featureText}>{feature.text}</Text>
+            </View>
+          ))}
           <Pressable onPress={triggerDemo} style={styles.demoButton}>
             <Text style={styles.demoButtonText}>🔔 See what an alert looks like</Text>
           </Pressable>
@@ -70,7 +107,8 @@ export function WelcomeScreen({ navigation }: Props) {
       </ScrollView>
 
       <SafeAreaView style={styles.footer} edges={['bottom']}>
-        <PrimaryButton label="Next: the ULEZ" onPress={() => navigation.navigate('UlezIntro')} />
+        <PrimaryButton label="DOWNLOAD FREE" onPress={() => navigation.navigate('UlezIntro')} />
+        <Text style={styles.footerSubtext}>Then subscribe for just £4.99 per year.</Text>
       </SafeAreaView>
 
       {demoVisible && (
@@ -118,17 +156,13 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   wordmark: {
-    fontSize: 25,
+    fontSize: 28,
     fontWeight: '800',
     color: colors.text,
     letterSpacing: 0.2,
     marginTop: spacing.sm,
     textAlign: 'center',
-  },
-  tagline: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textMuted,
+    lineHeight: 34,
   },
   statWrap: {
     marginTop: spacing.md,
@@ -142,15 +176,26 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.text,
     lineHeight: 32,
+    marginBottom: spacing.xs,
   },
-  copy: {
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  featureIcon: {
+    fontSize: 20,
+  },
+  featureText: {
+    flex: 1,
     fontSize: 15,
+    fontWeight: '600',
     color: colors.textMuted,
     lineHeight: 21,
   },
   demoButton: {
     alignSelf: 'flex-start',
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
   },
   demoButtonText: {
     fontSize: 14,
@@ -162,6 +207,12 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: spacing.md,
     backgroundColor: colors.background,
+    gap: spacing.xs,
+  },
+  footerSubtext: {
+    fontSize: 13,
+    color: colors.textMuted,
+    textAlign: 'center',
   },
   notification: {
     position: 'absolute',
