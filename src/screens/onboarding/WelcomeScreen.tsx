@@ -35,10 +35,10 @@ const STATS = [
 ];
 
 const FEATURES = [
-  { icon: '📍', text: "Detects when you've travelled through a toll zone" },
-  { icon: '🔔', text: 'Sends you a reminder to pay' },
-  { icon: '📅', text: 'Keeps you updated before your payment deadline' },
-  { icon: '💷', text: 'Helps you avoid costly fines' },
+  { icon: '📍', text: "Toll Alert detects when you've travelled through a toll zone" },
+  { icon: '🔔', text: 'Toll Alert sends you a reminder to pay' },
+  { icon: '📅', text: 'Toll Alert keeps you updated before your payment deadline' },
+  { icon: '💷', text: 'Toll Alert helps you avoid costly fines' },
 ];
 
 export function WelcomeScreen({ navigation }: Props) {
