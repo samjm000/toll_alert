@@ -34,13 +34,6 @@ const STATS = [
   },
 ];
 
-const FEATURES = [
-  { icon: '📍', text: "Toll Alert detects when you've travelled through a toll zone" },
-  { icon: '🔔', text: 'Toll Alert sends you a reminder to pay' },
-  { icon: '📅', text: 'Toll Alert keeps you updated before your payment deadline' },
-  { icon: '💷', text: 'Toll Alert helps you avoid costly fines' },
-];
-
 export function WelcomeScreen({ navigation }: Props) {
   const [demoVisible, setDemoVisible] = useState(false);
   const slideAnim = useRef(new Animated.Value(-160)).current;
@@ -93,13 +86,12 @@ export function WelcomeScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.content}>
-          <Text style={styles.title}>How it works</Text>
-          {FEATURES.map((feature) => (
-            <View key={feature.text} style={styles.featureRow}>
-              <Text style={styles.featureIcon}>{feature.icon}</Text>
-              <Text style={styles.featureText}>{feature.text}</Text>
-            </View>
-          ))}
+          <Text style={styles.title}>No barrier. No excuse.</Text>
+          <Text style={styles.copy}>
+            There's no toll booth at the Dartford Crossing — you pay online or by phone, up to
+            midnight the next day. Miss it, and the fine lands anyway. Toll Alert notices the
+            moment you cross and reminds you before it's too late.
+          </Text>
           <Pressable onPress={triggerDemo} style={styles.demoButton}>
             <Text style={styles.demoButtonText}>🔔 See what an alert looks like</Text>
           </Pressable>
@@ -176,20 +168,9 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.text,
     lineHeight: 32,
-    marginBottom: spacing.xs,
   },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  featureIcon: {
-    fontSize: 20,
-  },
-  featureText: {
-    flex: 1,
+  copy: {
     fontSize: 15,
-    fontWeight: '600',
     color: colors.textMuted,
     lineHeight: 21,
   },
