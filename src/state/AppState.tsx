@@ -2,6 +2,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { MOCK_CROSSINGS_CONFIG, MOCK_SUBSCRIPTION_CONFIG } from '../config/crossings';
 import { CrossingEvent } from '../types/crossing';
+import {
+  addPaidActionListener,
+  presentCrossingNotification,
+  registerCrossingNotificationCategory,
+} from '../notifications';
 
 const ONBOARDING_KEY = 'tollalert.onboardingComplete.v1';
 
@@ -69,17 +74,19 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const simulateCrossing = useCallback((crossingId: string) => {
-    const exists = MOCK_CROSSINGS_CONFIG.crossings.some((c) => c.id === crossingId);
-    if (!exists) return;
+    const crossing = MOCK_CROSSINGS_CONFIG.crossings.find((c) => c.id === crossingId);
+    if (!crossing) return;
+    const eventId = `${crossingId}-${Date.now()}`;
     setCrossingEvents((prev) => [
       {
-        id: `${crossingId}-${Date.now()}`,
+        id: eventId,
         crossingId,
         detectedAt: new Date().toISOString(),
         status: 'pending',
       },
       ...prev,
     ]);
+    presentCrossingNotification(crossing, eventId).catch(() => {});
   }, []);
 
   const markPaid = useCallback((eventId: string) => {
@@ -87,6 +94,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       prev.map((e) => (e.id === eventId ? { ...e, status: 'paid', paidAt: new Date().toISOString() } : e))
     );
   }, []);
+
+  useEffect(() => {
+    registerCrossingNotificationCategory().catch(() => {});
+    const subscription = addPaidActionListener(markPaid);
+    return () => subscription.remove();
+  }, [markPaid]);
 
   const value = useMemo<AppState>(
     () => ({

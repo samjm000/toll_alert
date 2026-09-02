@@ -19,14 +19,27 @@ Reminds you to pay UK toll crossings and charging zones you've driven into
 — Dartford Crossing and the London ULEZ for v1 — via a background local
 notification, with a self-reported "Paid" dismiss button.
 
-## Status: UI mockup only
+## Status: native build started (geofencing still stubbed)
 
-This build is a **front-end mockup** — every screen in the onboarding and
-core app flow is real, wired together, and demoable, but there is
-**no real background geofencing, no native location permission request, and
-no in-app purchase integration yet**. All of that is deliberately deferred
-until the mockup is reviewed, per your request to see the front end before
-committing to a background-geolocation/native-tooling approach.
+The mockup has been reviewed and the native build has started, following
+the client go-ahead. Every screen in the onboarding and core app flow is
+real, wired together, and demoable. The project is now set up as a
+**custom dev client** build (`expo-dev-client`, `expo-location`,
+`expo-notifications`, `expo-task-manager` added; `app.json` has the
+location/notification permission strings and plugin config) rather than
+plain managed Expo, since background geofencing needs custom native code
+that plain Expo Go can't run.
+
+Local push notifications (`src/notifications/`) are real and working —
+the "Simulate a crossing" button on Home already fires a proper local
+notification with a "Mark as paid" action, no stubbing needed there.
+
+**Background geofencing itself (`src/geofencing/`) is still fully stubbed**
+— the platform interface and the detailed implementation plan for both iOS
+and Android are written, but the actual native region-monitoring logic
+isn't built yet. See `src/geofencing/README.md` for exactly what's done vs.
+outstanding, and why (short version: it needs a real device/simulator to
+test against, which means the Mac mini).
 
 What's real:
 - Full onboarding flow: Welcome → How it works → Liability disclaimer
@@ -70,35 +83,27 @@ change. The ULEZ boundary coordinates in that file are an illustrative
 simplified rectangle, **not** the real TfL boundary — real integration
 needs TfL's published ULEZ boundary GeoJSON.
 
-## Open decision: what powers background geofencing
+## Native build: how it's set up
 
-This is the big one, deferred pending your review of this mockup. Building
-the real detection engine means picking:
+**Decided**: hand-rolled geofencing (no commercial library), under a custom
+Expo dev client (not plain managed Expo, not a full bare-workflow eject).
+This keeps Expo's JS-first workflow and EAS cloud builds while allowing the
+custom native location/geofencing code the app needs.
 
-1. **Geofencing library** — the strongest fit for the ULEZ
-   dynamic-region-swapping requirement (significant-location-change →
-   register a rolling set of small circular regions along the nearest
-   stretch of the real boundary, within iOS's 20-region cap) is
-   [Transistor Software's `react-native-background-geolocation`](https://github.com/transistorsoft/react-native-background-geolocation).
-   It's built for exactly this pattern and handles the proximity-sorted
-   region swapping for you, but it's a commercial license for production
-   (free for dev/testing with a debug watermark). The alternative is a
-   hand-rolled native `CLLocationManager` module (free, but we build and
-   maintain the region-swapping logic ourselves) or Expo's
-   `Location`/`TaskManager` background tasks (free and JS-only, but
-   polling-based rather than true native region monitoring — meaningfully
-   worse battery life and reliability for this use case).
-2. **Expo vs. bare React Native CLI** — this mockup is plain Expo
-   (`npx create-expo-app`, Expo SDK 57). Custom native modules — including
-   Transistor's library, which ships an Expo config plugin — still work
-   under Expo via prebuild + a dev client, and EAS Build can produce real
-   iOS builds from the cloud, which matters since this sandbox has no
-   Xcode/Android Studio/simulator to build or run against directly.
-
-Neither choice changes anything about the screens already built — it only
-affects what gets added under `src/` for the real detection engine, plus a
-native config/prebuild layer. Flagging both again here so a decision can be
-made deliberately rather than assumed.
+- `npx expo prebuild` generates the native `ios/` and `android/` project
+  folders from `app.json` + the installed config plugins. Those folders are
+  **gitignored** (see `.gitignore`) and regenerated on demand rather than
+  committed — this is Expo's recommended "Continuous Native Generation"
+  pattern, so `app.json` stays the single source of truth. Run
+  `npx expo prebuild` locally (or let EAS Build do it automatically) before
+  opening the project in Xcode/Android Studio.
+- Actually compiling/running the iOS build needs Xcode and CocoaPods, and
+  the Android build needs the Android SDK — none of which exist in this
+  sandbox. That compilation step happens on the Mac mini once it's set up,
+  or via EAS Build's cloud compilation in the meantime.
+- `com.tollalert.app` is the placeholder bundle identifier / Android
+  package name in `app.json` — replace it if the client's App
+  Store Connect / Play Console setup calls for something else.
 
 ## Already-decided per your brief (not re-asked)
 
