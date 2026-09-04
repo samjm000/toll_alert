@@ -1,84 +1,65 @@
 import * as Location from 'expo-location';
-import { Crossing } from '../types/crossing';
-import { CrossingDetectedHandler, GeofencingEngine } from './types';
+import { createGeofencingEngine } from './engine';
 
 /**
  * iOS background geofencing.
  *
- * STATUS: STUBBED — not yet implemented. Everything below documents the
- * approach so the real implementation (native build, once we're on the Mac
- * mini) has a clear spec to work from.
+ * STATUS: real region-swapping + point-in-polygon logic is implemented (see
+ * engine.ts / boundary.ts) using `expo-location`'s CoreLocation-backed
+ * geofencing and background-location APIs — this is no longer a no-op stub.
+ * What's NOT yet done is verified behaviour on a real device: none of this
+ * has run against actual GPS/CoreLocation, since that needs a native build
+ * on real hardware (or at least simulator GPS playback), which isn't
+ * available in this environment. This happens once we're on the Mac mini.
  *
  * --------------------------------------------------------------------------
  * THE CORE CONSTRAINT: CoreLocation only allows an app to monitor 20
- * circular regions at once, app-wide (`CLLocationManager.maximumRegionMonitoringDistance`
- * doesn't help here — it's a hard count cap, not a distance one). That's
- * fine for Dartford (1 region, permanent) but nowhere near enough to ring
- * the ~630 sq mile ULEZ boundary directly.
+ * circular regions at once, app-wide. That's fine for Dartford (1 region,
+ * permanent) but nowhere near enough to ring the ~630 sq mile ULEZ boundary
+ * directly.
  *
- * THE STRATEGY — dynamic region-swapping:
- * 1. Reserve 1 of the 20 slots permanently for Dartford's point geofence
- *    (`crossing.geofence.kind === 'circle'`).
- * 2. For ULEZ (`crossing.geofence.kind === 'polygon'`), don't monitor the
- *    whole boundary. Instead:
- *    a. Use `Location.startLocationUpdatesAsync` with
- *       `accuracy: Location.Accuracy.Low` and a large `distanceInterval`
- *       (effectively CoreLocation's significant-location-change service)
- *       to get coarse position updates cheaply in the background.
- *    b. On each coarse update, find the N nearest points along the ULEZ
- *       boundary polygon to the user's current position (N ≈ 15-18, to
- *       leave headroom under the 20-region cap alongside Dartford).
- *    c. Re-register circular regions (~150-300m radius) centred on those
- *       nearest boundary points via `Location.startGeofencingAsync`,
- *       un-registering the previous set first.
- *    d. When the user is far (>20-30km, say) from the ULEZ boundary
- *       entirely, don't monitor it at all — just keep polling coarse
- *       position and re-arm the boundary regions once they're back in
- *       range. This is also the main battery-saving lever.
- * 3. A true "am I inside the polygon" check (point-in-polygon, e.g.
- *    ray-casting against `crossing.geofence.boundary`) still needs to run
- *    against each coarse position update, independent of the swapped
- *    regions — the regions catch the *moment of crossing*, the polygon
- *    check confirms which side the user is now on (mainly to avoid
- *    re-notifying every time they wobble near the boundary).
+ * THE STRATEGY — dynamic region-swapping (implemented in engine.ts):
+ * 1 region reserved permanently for Dartford's point geofence. For ULEZ,
+ * a coarse background location task (`Location.startLocationUpdatesAsync`,
+ * low accuracy, large distance interval — effectively CoreLocation's
+ * significant-location-change service) drives `syncRegions()`, which:
+ *   a. finds the nearest `maxDynamicRegions` points along the ULEZ boundary
+ *      polygon to the user's current position,
+ *   b. re-registers circular regions around those points via
+ *      `Location.startGeofencingAsync`, replacing the previous set,
+ *   c. skips ULEZ entirely (no regions registered for it) once the user is
+ *      more than `ZONE_ACTIVATION_RADIUS_METERS` from the zone centroid —
+ *      the main battery-saving lever.
+ * A boundary-region ENTER event doesn't notify by itself — it wakes the
+ * point-in-polygon check (`isPointInPolygon` in boundary.ts) against that
+ * position, which is what actually decides whether the user just entered or
+ * exited the zone, and only fires `onCrossingDetected` on an outside→inside
+ * transition.
  *
- * TODO (native build):
- * - Implement the nearest-boundary-point selection + region re-registration
- *   in (2b)/(2c) above.
- * - Implement the point-in-polygon check for (3).
- * - Wire `Location.hasStartedGeofencingAsync` / background task events
- *   (via expo-task-manager, see the shared TASK_NAME below) into
- *   `onCrossingDetected`.
- * - Handle the "Always" permission upgrade flow (request "When In Use"
- *   first, then prompt for "Always" — see the in-app education screen
- *   this needs, not just the raw permission call).
- * - Test with simulated GPS routes (Xcode's location simulation, or a GPX
- *   route) for both a Dartford drive-through and a ULEZ boundary crossing.
+ * TODO (native build, needs a real device):
+ * - Verify the above against real/simulated GPS for both a Dartford
+ *   drive-through and a ULEZ boundary crossing.
+ * - Implement the "When In Use" → "Always" permission upgrade flow with an
+ *   in-app education screen shown before the system prompt (Apple App
+ *   Review expects this to be justified on-screen, not just requested).
+ * - Tune `ZONE_ACTIVATION_RADIUS_METERS` / `ZONE_REGION_RADIUS_METERS`
+ *   (engine.ts) and the location task's `distanceInterval` below against
+ *   real-world battery and detection-latency tradeoffs.
  * --------------------------------------------------------------------------
  */
 
 export const IOS_GEOFENCE_TASK_NAME = 'toll-alert-ios-geofence-task';
+export const IOS_LOCATION_TASK_NAME = 'toll-alert-ios-location-task';
 
-async function requestPermissions(): Promise<boolean> {
-  const foreground = await Location.requestForegroundPermissionsAsync();
-  if (foreground.status !== 'granted') return false;
-
-  const background = await Location.requestBackgroundPermissionsAsync();
-  return background.status === 'granted';
-}
-
-async function start(_crossings: Crossing[], _onCrossingDetected: CrossingDetectedHandler): Promise<void> {
-  // TODO: implement the region-swapping strategy documented above.
-  console.warn('[geofencing/ios] start() is a stub — background monitoring is not yet implemented.');
-}
-
-async function stop(): Promise<void> {
-  // TODO: unregister any active geofences and stop location updates.
-  console.warn('[geofencing/ios] stop() is a stub — nothing to stop yet.');
-}
-
-export const iosGeofencingEngine: GeofencingEngine = {
-  requestPermissions,
-  start,
-  stop,
-};
+export const iosGeofencingEngine = createGeofencingEngine({
+  geofenceTaskName: IOS_GEOFENCE_TASK_NAME,
+  locationTaskName: IOS_LOCATION_TASK_NAME,
+  maxDynamicRegions: 19, // 20-region CoreLocation cap, minus 1 reserved for Dartford's permanent circle
+  locationOptions: {
+    accuracy: Location.Accuracy.Low,
+    distanceInterval: 500,
+    activityType: Location.ActivityType.AutomotiveNavigation,
+    showsBackgroundLocationIndicator: true,
+    pausesUpdatesAutomatically: false,
+  },
+});

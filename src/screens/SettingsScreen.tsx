@@ -1,5 +1,6 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '../components/Card';
 import { StatusPill } from '../components/StatusPill';
@@ -11,7 +12,24 @@ import { useAppState } from '../state/AppState';
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
 export function SettingsScreen({ navigation }: Props) {
-  const { resetOnboarding } = useAppState();
+  const { resetOnboarding, backgroundMonitoringEnabled, setBackgroundMonitoringEnabled } = useAppState();
+  const [togglingMonitoring, setTogglingMonitoring] = useState(false);
+
+  const onToggleMonitoring = async () => {
+    setTogglingMonitoring(true);
+    try {
+      const ok = await setBackgroundMonitoringEnabled(!backgroundMonitoringEnabled);
+      if (!ok) {
+        Alert.alert(
+          'Location permission needed',
+          'Toll Alert needs "Always" / "Allow all the time" location access to detect crossings in the background. Enable it in system settings and try again.'
+        );
+      }
+    } finally {
+      setTogglingMonitoring(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -57,6 +75,33 @@ export function SettingsScreen({ navigation }: Props) {
             <Text style={styles.permLabel}>Notifications</Text>
             <StatusPill label="Mocked" tone="neutral" />
           </Card>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Background monitoring</Text>
+          <Text style={styles.sectionCaption}>
+            Real location-based detection (src/geofencing) — separate from the "Simulate crossing"
+            demo buttons on Home. Requires the custom dev client on a real device; does nothing under
+            Expo Go or the web preview. Still unverified against real GPS — see
+            src/geofencing/README.md.
+          </Text>
+          <Pressable onPress={onToggleMonitoring} disabled={togglingMonitoring || Platform.OS === 'web'}>
+            <Card style={styles.permRow}>
+              <Text style={styles.permLabel}>Monitor Dartford &amp; ULEZ in the background</Text>
+              <StatusPill
+                label={
+                  Platform.OS === 'web'
+                    ? 'Unsupported'
+                    : togglingMonitoring
+                      ? 'Working…'
+                      : backgroundMonitoringEnabled
+                        ? 'On'
+                        : 'Off'
+                }
+                tone={backgroundMonitoringEnabled ? 'success' : 'neutral'}
+              />
+            </Card>
+          </Pressable>
         </View>
 
         <View style={styles.section}>

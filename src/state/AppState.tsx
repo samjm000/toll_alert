@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { MOCK_CROSSINGS_CONFIG, MOCK_SUBSCRIPTION_CONFIG } from '../config/crossings';
-import { CrossingEvent } from '../types/crossing';
+import { geofencing } from '../geofencing';
+import { Crossing, CrossingEvent } from '../types/crossing';
 import {
   addPaidActionListener,
   presentCrossingNotification,
@@ -35,6 +36,16 @@ interface AppState {
   /** DEMO ONLY — stands in for the background geofencing engine firing a local notification. */
   simulateCrossing: (crossingId: string) => void;
   markPaid: (eventId: string) => void;
+
+  /**
+   * Real background monitoring (src/geofencing) — off by default. This
+   * calls the actual region-monitoring engine, not the demo button above;
+   * it needs a custom-dev-client build on a real device to do anything
+   * (won't run under Expo Go or the web preview). See src/geofencing/README.md.
+   */
+  backgroundMonitoringEnabled: boolean;
+  /** Requests location permission and starts/stops the real engine. Resolves false if permission was denied. */
+  setBackgroundMonitoringEnabled: (enabled: boolean) => Promise<boolean>;
 }
 
 const AppStateContext = createContext<AppState | undefined>(undefined);
@@ -44,6 +55,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [onboardingLoaded, setOnboardingLoaded] = useState(false);
   const [subscription, setSubscription] = useState<SubscriptionState>({ status: 'none' });
   const [crossingEvents, setCrossingEvents] = useState<CrossingEvent[]>([]);
+  const [backgroundMonitoringEnabled, setBackgroundMonitoringEnabledState] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem(ONBOARDING_KEY)
@@ -73,14 +85,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     setSubscription({ status: 'expired', expiresAt: expired.toISOString() });
   }, []);
 
-  const simulateCrossing = useCallback((crossingId: string) => {
-    const crossing = MOCK_CROSSINGS_CONFIG.crossings.find((c) => c.id === crossingId);
-    if (!crossing) return;
-    const eventId = `${crossingId}-${Date.now()}`;
+  const recordCrossing = useCallback((crossing: Crossing) => {
+    const eventId = `${crossing.id}-${Date.now()}`;
     setCrossingEvents((prev) => [
       {
         id: eventId,
-        crossingId,
+        crossingId: crossing.id,
         detectedAt: new Date().toISOString(),
         status: 'pending',
       },
@@ -88,6 +98,34 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     ]);
     presentCrossingNotification(crossing, eventId).catch(() => {});
   }, []);
+
+  const simulateCrossing = useCallback(
+    (crossingId: string) => {
+      const crossing = MOCK_CROSSINGS_CONFIG.crossings.find((c) => c.id === crossingId);
+      if (!crossing) return;
+      recordCrossing(crossing);
+    },
+    [recordCrossing]
+  );
+
+  const setBackgroundMonitoringEnabled = useCallback(
+    async (enabled: boolean): Promise<boolean> => {
+      if (!enabled) {
+        await geofencing.stop().catch(() => {});
+        setBackgroundMonitoringEnabledState(false);
+        return true;
+      }
+      const granted = await geofencing.requestPermissions();
+      if (!granted) {
+        setBackgroundMonitoringEnabledState(false);
+        return false;
+      }
+      await geofencing.start(MOCK_CROSSINGS_CONFIG.crossings, (detection) => recordCrossing(detection.crossing));
+      setBackgroundMonitoringEnabledState(true);
+      return true;
+    },
+    [recordCrossing]
+  );
 
   const markPaid = useCallback((eventId: string) => {
     setCrossingEvents((prev) =>
@@ -113,6 +151,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       crossingEvents,
       simulateCrossing,
       markPaid,
+      backgroundMonitoringEnabled,
+      setBackgroundMonitoringEnabled,
     }),
     [
       onboardingComplete,
@@ -125,6 +165,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       crossingEvents,
       simulateCrossing,
       markPaid,
+      backgroundMonitoringEnabled,
+      setBackgroundMonitoringEnabled,
     ]
   );
 

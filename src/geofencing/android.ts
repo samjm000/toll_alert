@@ -1,85 +1,63 @@
 import * as Location from 'expo-location';
-import { Crossing } from '../types/crossing';
-import { CrossingDetectedHandler, GeofencingEngine } from './types';
+import { createGeofencingEngine } from './engine';
 
 /**
  * Android background geofencing.
  *
- * STATUS: STUBBED — not yet implemented. Documenting the approach here so
- * the real implementation has a clear spec, same as ios.ts.
+ * STATUS: real region-swapping + point-in-polygon logic is implemented (see
+ * engine.ts / boundary.ts), same as ios.ts — this is no longer a no-op stub.
+ * Still unverified on a real device/emulator for the same reason as iOS: no
+ * Android SDK or hardware in this environment to test GPS behaviour against.
  *
  * --------------------------------------------------------------------------
- * LESS CONSTRAINED THAN iOS, BUT NOT UNLIMITED:
- * Android's Geofencing API (part of Google Play services' FusedLocationProvider)
- * allows up to 100 simultaneous geofences per app, vs iOS's 20. That's
- * enough headroom to ring a meaningfully larger stretch of the ULEZ
- * boundary at once, but the same dynamic swapping approach as iOS should
- * still be used for consistency (same boundary math, same battery
- * profile, same crossing-detection behaviour across platforms) rather
- * than relying on the higher cap to brute-force the whole polygon.
- *
- * THE STRATEGY (mirrors ios.ts):
- * 1. Dartford gets 1 permanent circular geofence.
- * 2. ULEZ: track coarse position via low-power location updates, pick the
- *    N nearest points along `crossing.geofence.boundary` (N can be larger
- *    than iOS's ~15-18, e.g. up to ~80, given the 100-geofence cap), and
- *    register/re-register geofences around them as the user moves.
- * 3. Run the same point-in-polygon check against coarse updates to confirm
- *    which side of the ULEZ boundary the user is currently on.
+ * LESS CONSTRAINED THAN iOS, BUT NOT UNLIMITED: Android's Geofencing API
+ * (FusedLocationProviderClient) allows up to 100 simultaneous geofences per
+ * app, vs iOS's 20 — enough headroom to ring a larger stretch of the ULEZ
+ * boundary at once, but engine.ts uses the same dynamic-swapping approach on
+ * both platforms for consistent behaviour and battery profile, just with a
+ * larger `maxDynamicRegions` budget here.
  *
  * ANDROID-SPECIFIC CONCERNS:
- * - Doze mode / battery optimisation can delay geofence transition
- *   callbacks significantly when the device is stationary and screen-off
- *   for a while. A foreground service (declared via the
- *   `FOREGROUND_SERVICE_LOCATION` permission already added to app.json)
- *   is the standard mitigation — needs a persistent low-priority
- *   notification while tracking is active.
+ * - Doze mode / battery optimisation can delay geofence transition callbacks
+ *   when the device is stationary and screen-off. The `foregroundService`
+ *   option below (backed by `isAndroidForegroundServiceEnabled` in
+ *   app.json's expo-location plugin config) keeps a persistent low-priority
+ *   notification while background tracking is active, which is the standard
+ *   mitigation.
  * - Android 10+ requires the two-step permission flow: foreground location
  *   granted first, then a *separate* "Allow all the time" prompt for
- *   ACCESS_BACKGROUND_LOCATION — same UX consideration as iOS's "Always"
- *   upgrade, different API shape.
+ *   ACCESS_BACKGROUND_LOCATION — `requestPermissions()` (engine.ts) already
+ *   does both calls in order, but the in-app education screen justifying the
+ *   background prompt (same idea as iOS's "Always" upgrade) still needs
+ *   building.
  * - OEM-specific background restrictions (Samsung, Xiaomi, etc. aggressively
  *   kill background tasks by default) may need a "please disable battery
  *   optimisation for this app" prompt — not solvable purely in code.
  *
- * TODO (native build):
- * - Implement nearest-boundary-point selection + geofence
- *   registration/re-registration (shared logic with ios.ts is a strong
- *   candidate for a cross-platform `src/geofencing/boundary.ts` helper
- *   once both are implemented).
- * - Implement the point-in-polygon check (same as iOS — can likely be a
- *   single shared implementation).
- * - Wire Android's geofence transition broadcasts (via expo-task-manager)
- *   into `onCrossingDetected`.
- * - Implement the foreground service + its notification.
- * - Test with simulated GPS routes (Android Studio's Extended Controls
- *   location playback, or a GPX route) for both a Dartford drive-through
- *   and a ULEZ boundary crossing.
+ * TODO (native build, needs a real device/emulator):
+ * - Verify against real/simulated GPS (Android Studio's Extended Controls
+ *   location playback, or a GPX route) for both a Dartford drive-through and
+ *   a ULEZ boundary crossing.
+ * - Build the foreground-permission → background-permission education screen.
+ * - Handle OEM battery-optimisation exemption prompting.
+ * - Tune `ZONE_ACTIVATION_RADIUS_METERS` / `ZONE_REGION_RADIUS_METERS`
+ *   (engine.ts) and the location task's `distanceInterval` below.
  * --------------------------------------------------------------------------
  */
 
 export const ANDROID_GEOFENCE_TASK_NAME = 'toll-alert-android-geofence-task';
+export const ANDROID_LOCATION_TASK_NAME = 'toll-alert-android-location-task';
 
-async function requestPermissions(): Promise<boolean> {
-  const foreground = await Location.requestForegroundPermissionsAsync();
-  if (foreground.status !== 'granted') return false;
-
-  const background = await Location.requestBackgroundPermissionsAsync();
-  return background.status === 'granted';
-}
-
-async function start(_crossings: Crossing[], _onCrossingDetected: CrossingDetectedHandler): Promise<void> {
-  // TODO: implement the region-swapping strategy documented above.
-  console.warn('[geofencing/android] start() is a stub — background monitoring is not yet implemented.');
-}
-
-async function stop(): Promise<void> {
-  // TODO: unregister any active geofences, stop location updates, and tear down the foreground service.
-  console.warn('[geofencing/android] stop() is a stub — nothing to stop yet.');
-}
-
-export const androidGeofencingEngine: GeofencingEngine = {
-  requestPermissions,
-  start,
-  stop,
-};
+export const androidGeofencingEngine = createGeofencingEngine({
+  geofenceTaskName: ANDROID_GEOFENCE_TASK_NAME,
+  locationTaskName: ANDROID_LOCATION_TASK_NAME,
+  maxDynamicRegions: 80, // 100-geofence Android cap, minus headroom for Dartford + a safety margin
+  locationOptions: {
+    accuracy: Location.Accuracy.Low,
+    distanceInterval: 500,
+    foregroundService: {
+      notificationTitle: 'Toll Alert is watching for crossings',
+      notificationBody: 'Background location is active so you get notified after Dartford or ULEZ.',
+    },
+  },
+});
