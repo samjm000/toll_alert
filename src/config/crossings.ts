@@ -435,10 +435,11 @@ export const MOCK_CROSSINGS_CONFIG: CrossingsConfig = {
         // Hessle/Barton-upon-Humber — approximate, verify precisely.
         latitude: 53.7101,
         longitude: -0.4478,
-        // Lower-speed crossing (50mph typical limit, lower than motorway
-        // speed) but a genuinely long structure (~2.2km) — sized between
-        // the motorway and tunnel-portal categories to reflect that.
-        radiusMeters: 400,
+        // Lower-speed / constrained crossing — kept at 250m like the other
+        // lower-speed-category crossing (Warburton, below) rather than
+        // treated as a special case; see the file-level comment's
+        // "Lower-speed / constrained crossings" category.
+        radiusMeters: 250,
       },
       price: {
         amount: 2.0,
@@ -460,10 +461,11 @@ export const MOCK_CROSSINGS_CONFIG: CrossingsConfig = {
         // Warburton/Rixton, Cheshire — approximate, verify precisely.
         latitude: 53.4,
         longitude: -2.4939,
-        // Lower-speed, narrow single-lane bridge — the smallest radius
-        // here, kept tight so it stays specific to this small structure
-        // rather than bleeding into surrounding minor roads.
-        radiusMeters: 150,
+        // Lower-speed / constrained crossing — kept at 250m like the other
+        // lower-speed-category crossing (Humber Bridge, above) rather than
+        // treated as a special case; see the file-level comment's
+        // "Lower-speed / constrained crossings" category.
+        radiusMeters: 250,
       },
       price: {
         amount: 1.0,
