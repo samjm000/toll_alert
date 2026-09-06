@@ -5,18 +5,14 @@ import { Crossing } from '../types/crossing';
 /**
  * Local push notifications for "you've crossed — pay by [time]" alerts.
  *
- * Unlike src/geofencing (fully stubbed, needs native build to test), this
- * is real, working code — expo-notifications' local scheduling API doesn't
- * need the geofencing engine to exist first, and can already be exercised
- * today via the "simulate a crossing" testing button on Home (wired through
- * AppState.simulateCrossing). It's guarded off on web (Platform.OS === 'web')
- * since this app's web export is a UI preview only, not a target for real
- * notifications, and expo-notifications doesn't support local notifications
- * there.
- *
- * Once the real geofencing engine (src/geofencing) is implemented, its
- * `onCrossingDetected` callback should call `presentCrossingNotification`
- * the same way the simulate button does now.
+ * `presentCrossingNotification` fires from two callers: the "simulate a
+ * crossing" testing button on Home (via AppState.simulateCrossing) and the
+ * real background geofencing engine's `onCrossingDetected` callback (see
+ * src/geofencing/engine.ts and AppState.recordCrossing) — same function,
+ * same notification, so what you see from the demo button is exactly what a
+ * real detection produces. Guarded off on web (Platform.OS === 'web') since
+ * this app's web export is a UI preview only, and expo-notifications doesn't
+ * support local notifications there.
  */
 
 export const PAID_ACTION_ID = 'mark-paid';
@@ -62,7 +58,7 @@ export async function presentCrossingNotification(crossing: Crossing, eventId: s
   await Notifications.scheduleNotificationAsync({
     content: {
       title: `${crossing.shortName} detected`,
-      body: `You've just crossed. Tap to pay ${crossing.price.label} — or mark as paid once you have.`,
+      body: `Pay ${crossing.price.label} by ${crossing.scheme.paymentDeadlineLabel.toLowerCase()} — tap to pay, or mark as paid once you have.`,
       categoryIdentifier: CROSSING_CATEGORY_ID,
       data: { crossingId: crossing.id, eventId },
       sound: true,

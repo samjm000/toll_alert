@@ -2,11 +2,14 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BackgroundLocationRationaleModal } from '../components/BackgroundLocationRationaleModal';
 import { Card } from '../components/Card';
+import { PrimaryButton } from '../components/PrimaryButton';
 import { StatusPill } from '../components/StatusPill';
 import { colors, radii, spacing } from '../theme';
 import { RootStackParamList } from '../navigation/types';
 import { MOCK_CROSSINGS_CONFIG } from '../config/crossings';
+import { requestIgnoreBatteryOptimizations } from '../geofencing/batteryOptimization';
 import { useAppState } from '../state/AppState';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
@@ -14,11 +17,12 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 export function SettingsScreen({ navigation }: Props) {
   const { resetOnboarding, backgroundMonitoringEnabled, setBackgroundMonitoringEnabled } = useAppState();
   const [togglingMonitoring, setTogglingMonitoring] = useState(false);
+  const [rationaleVisible, setRationaleVisible] = useState(false);
 
-  const onToggleMonitoring = async () => {
+  const enableMonitoring = async () => {
     setTogglingMonitoring(true);
     try {
-      const ok = await setBackgroundMonitoringEnabled(!backgroundMonitoringEnabled);
+      const ok = await setBackgroundMonitoringEnabled(true);
       if (!ok) {
         Alert.alert(
           'Location permission needed',
@@ -28,6 +32,21 @@ export function SettingsScreen({ navigation }: Props) {
     } finally {
       setTogglingMonitoring(false);
     }
+  };
+
+  const onToggleMonitoring = async () => {
+    if (backgroundMonitoringEnabled) {
+      setTogglingMonitoring(true);
+      try {
+        await setBackgroundMonitoringEnabled(false);
+      } finally {
+        setTogglingMonitoring(false);
+      }
+      return;
+    }
+    // Show the rationale before the OS prompt rather than requesting cold —
+    // see src/geofencing/README.md and BackgroundLocationRationaleModal.
+    setRationaleVisible(true);
   };
 
   return (
@@ -59,10 +78,18 @@ export function SettingsScreen({ navigation }: Props) {
               <View style={{ flex: 1 }}>
                 <Text style={styles.crossingName}>{c.name}</Text>
                 <Text style={styles.crossingMeta}>{c.price.label}</Text>
+                <Text style={styles.crossingVerified}>
+                  Verified {new Date(c.scheme.verifiedAt).toLocaleDateString([], { dateStyle: 'medium' })}
+                </Text>
               </View>
               <StatusPill label="On" tone="success" />
             </Card>
           ))}
+          <Text style={styles.sectionCaption}>
+            Toll and fine figures above are unverified field data, not final — coordinates are
+            landmark-level approximations and rates change often. See each crossing's "Verified"
+            date and src/geofencing/README.md before relying on any of this.
+          </Text>
         </View>
 
         <View style={styles.section}>
@@ -87,7 +114,7 @@ export function SettingsScreen({ navigation }: Props) {
           </Text>
           <Pressable onPress={onToggleMonitoring} disabled={togglingMonitoring || Platform.OS === 'web'}>
             <Card style={styles.permRow}>
-              <Text style={styles.permLabel}>Monitor Dartford &amp; ULEZ in the background</Text>
+              <Text style={styles.permLabel}>Monitor all crossings in the background</Text>
               <StatusPill
                 label={
                   Platform.OS === 'web'
@@ -103,6 +130,24 @@ export function SettingsScreen({ navigation }: Props) {
             </Card>
           </Pressable>
         </View>
+
+        {Platform.OS === 'android' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Reliability</Text>
+            <Text style={styles.sectionCaption}>
+              Several Android manufacturers (Xiaomi, Huawei, Samsung, and OnePlus among the most
+              aggressive) kill background location for apps that aren't explicitly exempted from
+              battery optimisation — without this, Toll Alert can silently stop detecting
+              crossings after a while, with no error you'd see. There's no way to check whether
+              it's already granted, so this always opens the system dialog.
+            </Text>
+            <PrimaryButton
+              label="Improve reliability"
+              variant="secondary"
+              onPress={() => requestIgnoreBatteryOptimizations()}
+            />
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Legal</Text>
@@ -132,6 +177,15 @@ export function SettingsScreen({ navigation }: Props) {
 
         <Text style={styles.version}>Toll Alert — UI mockup build</Text>
       </ScrollView>
+
+      <BackgroundLocationRationaleModal
+        visible={rationaleVisible}
+        onCancel={() => setRationaleVisible(false)}
+        onContinue={() => {
+          setRationaleVisible(false);
+          enableMonitoring();
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -146,6 +200,7 @@ const styles = StyleSheet.create({
   crossingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   crossingName: { fontSize: 15, fontWeight: '700', color: colors.text },
   crossingMeta: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+  crossingVerified: { fontSize: 11, color: colors.textMuted, marginTop: 2, fontStyle: 'italic' },
   permRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   permLabel: { fontSize: 14, color: colors.text },
   chevron: { fontSize: 20, color: colors.textMuted },

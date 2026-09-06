@@ -16,10 +16,12 @@ be reachable by anyone without being signed in as a collaborator.)
 
 
 Reminds you to pay UK toll crossings and charging zones you've driven into
-— Dartford Crossing and the London ULEZ for v1 — via a background local
-notification, with a self-reported "Paid" dismiss button.
+— Dartford Crossing, the London ULEZ, Blackwall & Silvertown Tunnels, Mersey
+Gateway & Silver Jubilee Bridges, Tyne Tunnel, Humber Bridge, and Warburton
+Toll Bridge for v1 — via a background local notification, with a
+self-reported "Paid" dismiss button.
 
-## Status: native build started (geofencing still stubbed)
+## Status: Android geofencing implemented, awaiting your device/emulator test
 
 The mockup has been reviewed and the native build has started, following
 the client go-ahead. Every screen in the onboarding and core app flow is
@@ -34,12 +36,27 @@ Local push notifications (`src/notifications/`) are real and working —
 the "Simulate a crossing" button on Home already fires a proper local
 notification with a "Mark as paid" action, no stubbing needed there.
 
-**Background geofencing itself (`src/geofencing/`) is still fully stubbed**
-— the platform interface and the detailed implementation plan for both iOS
-and Android are written, but the actual native region-monitoring logic
-isn't built yet. See `src/geofencing/README.md` for exactly what's done vs.
-outstanding, and why (short version: it needs a real device/simulator to
-test against, which means the Mac mini).
+**Background geofencing (`src/geofencing/`) is real, working code for
+Android, confirmed on an emulator** — the 8 real UK toll crossings are
+permanent native circular geofences; ULEZ is detected completely
+differently (a circle, or any small set of circles, can't represent its
+actual shape — see `src/geofencing/README.md`, "Why ULEZ is different"):
+one cheap permanent "wake" geofence plus a real point-in-polygon check
+against TfL's actual published boundary data
+(`src/config/ulezBoundary.ts`), run only once genuinely nearby. Both paths
+were run end-to-end on an Android emulator (mock GPS): a real Dartford
+notification fires correctly with no false ULEZ alongside it, and a real
+central-London position correctly fires ULEZ via the new detection path.
+`src/geofencing/README.md` has the full results plus what's still
+outstanding (real-world testing). Each crossing's geofence radius is now
+reasoned per crossing type and driving speed rather than one flat guess
+(motorway-speed open crossings, tunnel portals, and lower-speed crossings
+each got different sizing) — and deliberately stays reasoned rather than
+measured, since there's no tester-facing telemetry to ever gather real
+detection data from (testers are non-technical; feedback is Rob asking
+each one directly). **iOS geofencing is implemented but untouched pending
+a Mac for Xcode** — see
+`src/geofencing/ios.ts`.
 
 What's real:
 - Full onboarding flow: Welcome → How it works → Liability disclaimer
@@ -74,14 +91,28 @@ npm run web      # or: npm start, then press i / a for a real device/simulator
 
 Per your answer, this build does **not** stand up a config backend. What it
 does have is the full client-side contract: `src/types/crossing.ts` defines
-`CrossingsConfig`/`Crossing`/`Geofence`, and `src/config/crossings.ts`
-provides mock data in exactly that shape for Dartford (a `circle` point
-geofence) and ULEZ (a `polygon` boundary + centroid). Swapping the mock
+`CrossingsConfig`/`Crossing`/`Geofence`/`ChargingScheme`, and
+`src/config/crossings.ts` provides mock data in exactly that shape — a
+`circle` point geofence for all eight UK toll crossings (Dartford, Blackwall,
+Silvertown, Mersey Gateway, Silver Jubilee, Tyne Tunnel, Humber Bridge,
+Warburton) plus ULEZ's `polygon` boundary + centroid. Swapping the mock
 loader for `fetch(CONFIG_URL)` against a real endpoint later is a one-line
 change in `src/config/crossings.ts` — nothing in the screens needs to
-change. The ULEZ boundary coordinates in that file are an illustrative
-simplified rectangle, **not** the real TfL boundary — real integration
-needs TfL's published ULEZ boundary GeoJSON.
+change.
+
+**Real toll/fine data, not final.** As of 2026-09-05 the eight toll
+crossings carry real published toll amounts, fine-escalation stages, payment
+deadlines, and source URLs (see each `Crossing.scheme` — shared via one
+`ChargingScheme` object for Blackwall/Silvertown and another for Mersey
+Gateway/Silver Jubilee, so a rate change only needs updating once per
+scheme). Every crossing's coordinates, though, are landmark-level
+approximations from general knowledge (`coordinatesVerified: false`), not
+surveyed data, and every scheme's `verifiedAt` date needs re-checking before
+release — full checklist in `src/geofencing/README.md`. The Settings screen
+shows each crossing's verified date so staleness is visible at a glance.
+ULEZ is the exception: its boundary is TfL/GLA's own published open data
+(`coordinatesVerified: true`, `src/config/ulezBoundary.ts` — source, Open
+Government Licence attribution, and processing notes there), not a guess.
 
 ## Native build: how it's set up
 
@@ -97,10 +128,13 @@ custom native location/geofencing code the app needs.
   pattern, so `app.json` stays the single source of truth. Run
   `npx expo prebuild` locally (or let EAS Build do it automatically) before
   opening the project in Xcode/Android Studio.
-- Actually compiling/running the iOS build needs Xcode and CocoaPods, and
-  the Android build needs the Android SDK — none of which exist in this
-  sandbox. That compilation step happens on the Mac mini once it's set up,
-  or via EAS Build's cloud compilation in the meantime.
+- Actually compiling/running the iOS build needs Xcode and CocoaPods (none
+  of which exist in the sandbox this was built in — that happens on the Mac
+  mini once it's set up). The Android build needs the Android SDK, which
+  your machine has Android Studio for already, just with setup incomplete —
+  see `src/geofencing/README.md`'s "Manual testing" section for exact setup
+  and test steps, or use `npm run build:android:dev` (EAS cloud build, no
+  local SDK needed for the build step itself) either way.
 - `com.tollalert.app` is the placeholder bundle identifier / Android
   package name in `app.json` — replace it if the client's App
   Store Connect / Play Console setup calls for something else.

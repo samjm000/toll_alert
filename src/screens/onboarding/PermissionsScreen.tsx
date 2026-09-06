@@ -31,8 +31,9 @@ export function PermissionsScreen(_props: Props) {
           </Text>
         </Card>
         <Text style={styles.note}>
-          (This screen is a mock — the real permission prompt is triggered by native background
-          geolocation setup, not yet wired up in this build.)
+          (This screen doesn't request permission itself — that happens later, from the
+          Settings screen's "Background monitoring" toggle, since real location tracking is
+          opt-in rather than sprung on you during setup.)
         </Text>
       </View>
       <PrimaryButton label="Continue" onPress={completeOnboarding} />

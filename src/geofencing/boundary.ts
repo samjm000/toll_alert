@@ -21,11 +21,10 @@ export function haversineDistanceMeters(a: LatLng, b: LatLng): number {
 }
 
 /**
- * Ray-casting point-in-polygon test against a closed [lng, lat] ring (the
- * shape `ZoneGeofence.boundary` uses, matching GeoJSON winding). Confirms
- * which side of a zone boundary a coarse position update falls on — the
- * dynamic geofence regions only catch the *moment* of crossing, this is what
- * decides whether that moment was an entry or exit (see engine.ts).
+ * Ray-casting point-in-polygon test against a single closed [lng, lat] ring
+ * (GeoJSON winding). No hole support — nothing in this app's boundary data
+ * needs it (see `isPointInAnyPolygon` for the multi-polygon case a real
+ * zone boundary like ULEZ actually has).
  */
 export function isPointInPolygon(point: LatLng, ring: Array<[number, number]>): boolean {
   let inside = false;
@@ -41,15 +40,13 @@ export function isPointInPolygon(point: LatLng, ring: Array<[number, number]>): 
 }
 
 /**
- * The `count` points along `ring` closest to `position` — the boundary-point
- * set to ring with real circular geofences right now, per the dynamic
- * region-swapping strategy documented in ios.ts / android.ts. O(n log n) in
- * the ring's vertex count, which is fine at the size of one administrative
- * boundary (tens to low hundreds of points, not a fine-grained coastline).
+ * True if `point` is inside any of `polygons` — a real administrative
+ * boundary (e.g. ULEZ) is rarely one single contour; TfL's own published
+ * ULEZ data is 22 separate simple polygons (one large contiguous area plus
+ * small separate enclaves) whose union is "inside the zone". Run on every
+ * background location update while inside the coarse wake-up geofence —
+ * see engine.ts.
  */
-export function nearestBoundaryPoints(position: LatLng, ring: Array<[number, number]>, count: number): LatLng[] {
-  return ring
-    .map(([longitude, latitude]) => ({ latitude, longitude }))
-    .sort((a, b) => haversineDistanceMeters(position, a) - haversineDistanceMeters(position, b))
-    .slice(0, count);
+export function isPointInAnyPolygon(point: LatLng, polygons: Array<Array<[number, number]>>): boolean {
+  return polygons.some((ring) => isPointInPolygon(point, ring));
 }

@@ -62,8 +62,7 @@ export function SubscriptionScreen(_props: Props) {
 
         <Card>
           <Text style={styles.cardTitle}>What you get</Text>
-          <Text style={styles.bullet}>• Background alerts for Dartford Crossing</Text>
-          <Text style={styles.bullet}>• Background alerts for ULEZ</Text>
+          <Text style={styles.bullet}>• Background alerts for all 9 monitored crossings</Text>
           <Text style={styles.bullet}>• New crossings added automatically, no app update needed</Text>
         </Card>
 

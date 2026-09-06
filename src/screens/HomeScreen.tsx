@@ -34,7 +34,7 @@ export function HomeScreen({ navigation }: Props) {
                   <Text style={styles.liveText}>Live tracking active</Text>
                 </View>
               ) : (
-                <Text style={styles.subtitle}>Watching 2 crossings</Text>
+                <Text style={styles.subtitle}>Watching {MOCK_CROSSINGS_CONFIG.crossings.length} crossings</Text>
               )}
             </View>
           </View>
@@ -61,7 +61,7 @@ export function HomeScreen({ navigation }: Props) {
             <Text style={styles.subBannerBody}>
               {subscription.status === 'expired'
                 ? 'Renew to keep getting background crossing alerts.'
-                : 'Subscribe to enable background alerts for Dartford Crossing and ULEZ.'}
+                : 'Subscribe to enable background alerts for every monitored crossing.'}
             </Text>
             <PrimaryButton
               label={subscription.status === 'expired' ? 'Renew' : 'View subscription'}
