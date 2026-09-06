@@ -104,6 +104,56 @@ attempt worked. If a future session hits the same thing, don't assume a
 reported "I logged in" is actually reflected in the CLI — verify with
 `eas-cli whoami` before proceeding.
 
+## 2026-09-06 session, continued: stale Pages deploy
+
+The live site at `samjm000.github.io/toll_alert` (deployed by
+`.github/workflows/deploy-pages.yml`, which runs `npx expo export
+--platform web` and pushes the result to GitHub Pages on every push to
+`claude/app-icon-nn4ikf`/`main`) was showing an outdated version — still
+looking like the old 2-crossing (Dartford + ULEZ) app despite the 8-crossing
+data pass and the radius fix already being in the local repo.
+
+**Actual cause, confirmed from the GitHub Actions API before touching
+anything** (do this again first if this ever recurs — don't assume from the
+workflow file or a green checkmark):
+- Checked `.../actions/workflows/345486059/runs` — the workflow itself had
+  **never failed**. Its most recent run (#22, 2026-09-04) succeeded, but
+  it ran on commit `245ed30` ("Implement real background geofencing
+  engine..."), which predates the entire 8-crossing/real-ULEZ-boundary
+  commit (`91c2705`) and everything after it.
+- `git status` showed the local repo was **4 commits ahead of
+  `origin/claude/app-icon-nn4ikf`**. `91c2705`, plus this session's three
+  commits (radius fix, EAS link, this file), had only ever been committed
+  locally — never pushed. So the workflow had nothing new to trigger on;
+  it wasn't broken, it just hadn't run against current source because
+  current source never reached GitHub.
+- This was **not** a caching issue, **not** a workflow-trigger-branch
+  mismatch (the workflow already correctly lists
+  `claude/app-icon-nn4ikf`, which is both the branch actually being
+  pushed to and the repo's GitHub default branch), and **not** a build
+  failure. Ruled all three out via the Actions API and a plain `git
+  status` before concluding this.
+
+**Fix**: `git push origin claude/app-icon-nn4ikf` (fast-forward,
+`245ed30..220d821`). This triggered run #23 automatically, which
+succeeded. Verified the live result by fetching the deployed JS bundle
+directly (`_expo/static/js/web/index-<hash>.js` referenced from
+`index.html`) and grepping it for all 8 crossing names — **do this, not
+a plain `curl`/`WebFetch` of the page itself**, since the site is a
+client-rendered SPA and a non-JS-executing fetch only ever returns the
+empty shell (`<div id="root"></div>` plus the bare `<title>toll_alert</title>`)
+regardless of whether the underlying deploy is fresh or stale. That
+shell-only response is what caused this to look like "no content" during
+earlier diagnosis in this same session — false alarm, not the real
+bug. The bundle's `Last-Modified` header matching the just-completed
+deploy, combined with all 8 crossing names actually present in it, is
+what confirmed the fix worked.
+
+**Lesson for next session**: in this repo, a local commit is not "done"
+until it's pushed — the Pages deploy (and anything else gated on `push`)
+silently does nothing otherwise, with no error anywhere to notice. Push
+after committing unless there's a specific reason not to.
+
 ## Known-stale / needs-verification items (carried over, not new)
 
 These predate this session — see `src/config/crossings.ts`'s file-level
