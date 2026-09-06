@@ -54,6 +54,12 @@
           "color": "#F3B815"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "d8725cc4-820d-4898-9e31-7f0b8d4d2f8d"
+      }
+    },
+    "owner": "samjm001"
   }
 }
