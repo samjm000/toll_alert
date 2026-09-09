@@ -344,6 +344,11 @@ export const MOCK_CROSSINGS_CONFIG: CrossingsConfig = {
         operator: 'Transport for London (TfL)',
         paymentDeadlineHours: 72,
         paymentDeadlineLabel: 'Midnight 3 days after driving in the zone',
+        // £12.50 covers the whole day however many times you enter, unlike
+        // every other scheme here. Without this the app alerted on each entry
+        // — and since 2026-09-09 would also start a fresh set of repeating
+        // reminders each time — for a single charge.
+        chargePeriod: 'daily',
         fineStages: [
           { label: 'Penalty Charge Notice (PCN) issued', amount: 180, currency: 'GBP', daysUntilThreshold: 0 },
           { label: 'Reduced rate if paid within 14 days', amount: 90, currency: 'GBP', daysUntilThreshold: 14 },

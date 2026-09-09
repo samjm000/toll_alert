@@ -92,11 +92,30 @@ of this that can be tested without the JSON-import problem.
 epcplc.com, minicabs.co.uk), not tfl.gov.uk directly. Re-verify before
 relying on them.
 
+### ULEZ daily charge — fixed
+
+`ChargingScheme.chargePeriod` is `'daily'` for the ULEZ and absent (meaning
+per-crossing) everywhere else, which is right for the other eight: drive
+Dartford there and back and you genuinely owe twice.
+
+`recordDetection` now suppresses a second same-day detection for a
+daily-charged scheme — no event, no notification, and critically no second
+set of repeating reminders for one £12.50.
+
+Two decisions worth knowing:
+
+- **It ignores whether the earlier detection was marked paid.** The charge is
+  the same either way, so a second entry needs no second alert regardless.
+- **Calendar day, not a rolling 24 hours** (`isSameLocalDay`), because that
+  is the unit TfL bills on. Two crossings 25 minutes apart either side of
+  midnight are two charging days and correctly produce two alerts.
+
+`hasBeenChargedToday` ignores unparseable timestamps rather than treating
+them as a match — failing towards alerting, same principle as the
+time-of-day check failing open. Both are unit-tested.
+
 ### Still not done
 
-- **ULEZ is a daily charge and still fires per entry.** Driving in and out
-  twice in a day is two alerts for one £12.50 — and now two sets of
-  reminders. This is the next thing to fix in this area.
 - The Subscription screen still promises 7-day renewal and lapsed reminders
   that nothing schedules.
 - Android 12+ may deliver repeating alarms inexactly without

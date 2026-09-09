@@ -7,7 +7,7 @@
  * change, not a redesign.
  */
 
-import type { ChargeableHours } from '../config/chargeableHours';
+import type { ChargeableHours, ChargePeriod } from '../config/chargeableHours';
 
 export type CrossingType = 'point' | 'zone';
 
@@ -90,6 +90,12 @@ export interface ChargingScheme {
   paymentDeadlineHours: number;
   /** Exact human-readable rule, e.g. "Midnight the day after crossing". */
   paymentDeadlineLabel: string;
+  /**
+   * How often this scheme bills. Defaults to per-crossing when omitted, which
+   * is right for eight of the nine — the ULEZ is the exception, charging once
+   * per day however many times you enter.
+   */
+  chargePeriod?: ChargePeriod;
   fineStages: FineStage[];
   sourceUrl: string;
   /** ISO date these figures were last checked against the source. Toll/PCN rates change often (several changed in the last 12 months) — treat as stale until re-checked. */

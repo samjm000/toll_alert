@@ -97,3 +97,45 @@ export function isChargeableAt(
 
   return offsetFromStart < gracedLength;
 }
+
+/* ------------------------------------------------------------------ *
+ * Charge periodicity
+ * ------------------------------------------------------------------ */
+
+/**
+ * How often a scheme charges.
+ *
+ * Eight of the nine crossings bill **per crossing** — drive Dartford there
+ * and back and you owe twice, so two alerts is correct. The ULEZ bills
+ * **per day**: £12.50 covers every entry between midnight and midnight, so
+ * alerting on each entry means several notifications, and now several sets
+ * of repeating reminders, for a single charge the user may already have paid.
+ */
+export type ChargePeriod = 'per-crossing' | 'daily';
+
+/** Local calendar day, which is the unit TfL's daily charge runs on. */
+export function isSameLocalDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+  );
+}
+
+/**
+ * Whether a daily-charged crossing has already been detected today, and so
+ * should not produce a second alert.
+ *
+ * Takes the ISO timestamps of previous detections rather than the events
+ * themselves, so it stays free of app types and testable on its own.
+ *
+ * Deliberately does NOT care whether the earlier detection was marked paid:
+ * the charge is the same £12.50 either way, so a second entry needs no second
+ * alert regardless. Unparseable timestamps are ignored rather than treated as
+ * a match — failing towards alerting, for the same reason the time-of-day
+ * check fails open.
+ */
+export function hasBeenChargedToday(previousDetectionsIso: string[], when: Date): boolean {
+  return previousDetectionsIso.some((iso) => {
+    const previous = new Date(iso);
+    return !Number.isNaN(previous.getTime()) && isSameLocalDay(previous, when);
+  });
+}

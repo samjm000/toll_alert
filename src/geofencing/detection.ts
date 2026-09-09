@@ -1,9 +1,9 @@
 import { Crossing, CrossingEvent } from '../types/crossing';
-import { appendCrossingEvent } from '../state/persistence';
+import { appendCrossingEvent, loadCrossingEvents } from '../state/persistence';
 import { presentCrossingNotification } from '../notifications';
 import { syncReminders } from '../notifications/reminders';
 import { MOCK_CROSSINGS_CONFIG } from '../config/crossings';
-import { isChargeableAt } from '../config/chargeableHours';
+import { hasBeenChargedToday, isChargeableAt } from '../config/chargeableHours';
 import { logEvent } from '../diagnostics/log';
 
 /**
@@ -31,7 +31,9 @@ export async function recordDetection(
   // Simulated detections deliberately bypass this: the Home screen's
   // "Simulate crossing" button is a demo tool, and having it silently do
   // nothing at 3am would look like a broken button.
-  if (source === 'geofence' && !isChargeableAt(crossing.chargeableHours, new Date())) {
+  const now = new Date();
+
+  if (source === 'geofence' && !isChargeableAt(crossing.chargeableHours, now)) {
     await logEvent(
       'info',
       'detection',
@@ -41,10 +43,30 @@ export async function recordDetection(
     return null;
   }
 
+  // A daily-charged scheme (the ULEZ) bills once however many times you
+  // enter, so a second entry on the same day needs no second alert — and
+  // must not start a second set of repeating reminders for one £12.50.
+  // Checked regardless of whether the earlier one was marked paid: the charge
+  // is the same either way.
+  if (source === 'geofence' && crossing.scheme.chargePeriod === 'daily') {
+    const previous = (await loadCrossingEvents())
+      .filter((e) => e.crossingId === crossing.id)
+      .map((e) => e.detectedAt);
+
+    if (hasBeenChargedToday(previous, now)) {
+      await logEvent(
+        'info',
+        'detection',
+        `${crossing.shortName} entered again today — daily charge already recorded, no second alert`
+      );
+      return null;
+    }
+  }
+
   const event: CrossingEvent = {
-    id: `${crossing.id}-${Date.now()}`,
+    id: `${crossing.id}-${now.getTime()}`,
     crossingId: crossing.id,
-    detectedAt: new Date().toISOString(),
+    detectedAt: now.toISOString(),
     status: 'pending',
   };
 

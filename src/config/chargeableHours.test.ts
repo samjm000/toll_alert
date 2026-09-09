@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isChargeableAt, DEFAULT_GRACE_MINUTES } from './chargeableHours.ts';
+import {
+  isChargeableAt,
+  DEFAULT_GRACE_MINUTES,
+  hasBeenChargedToday,
+  isSameLocalDay,
+} from './chargeableHours.ts';
 
 /** Local-time Date on an arbitrary non-Christmas day. */
 const at = (hh: number, mm: number, month = 6, day = 15) => new Date(2026, month - 1, day, hh, mm, 0);
@@ -71,4 +76,28 @@ test('unparseable hours fail open rather than closed', () => {
 
 test('the default grace is small enough to be meaningful', () => {
   assert.ok(DEFAULT_GRACE_MINUTES > 0 && DEFAULT_GRACE_MINUTES <= 30);
+});
+
+test('hasBeenChargedToday — the ULEZ daily-charge case', () => {
+  const noon = at(12, 0, 6, 15);
+  const laterSameDay = new Date(2026, 5, 15, 18, 30).toISOString();
+  const previousDay = new Date(2026, 5, 14, 23, 59).toISOString();
+  const nextDay = new Date(2026, 5, 16, 0, 1).toISOString();
+
+  assert.equal(hasBeenChargedToday([], noon), false, 'no history means not yet charged');
+  assert.equal(hasBeenChargedToday([laterSameDay], noon), true, 'same calendar day counts');
+  assert.equal(hasBeenChargedToday([previousDay], noon), false, 'yesterday does not');
+  assert.equal(hasBeenChargedToday([nextDay], noon), false, 'tomorrow does not');
+  assert.equal(hasBeenChargedToday([previousDay, laterSameDay], noon), true, 'any same-day entry counts');
+});
+
+test('hasBeenChargedToday ignores unparseable timestamps rather than matching them', () => {
+  // Failing towards alerting: a corrupt record must not suppress a real charge.
+  assert.equal(hasBeenChargedToday(['not-a-date', ''], at(12, 0)), false);
+});
+
+test('isSameLocalDay is a calendar-day comparison, not a 24-hour window', () => {
+  assert.equal(isSameLocalDay(new Date(2026, 5, 15, 0, 1), new Date(2026, 5, 15, 23, 59)), true);
+  // 25 minutes apart, but either side of midnight — different charging days.
+  assert.equal(isSameLocalDay(new Date(2026, 5, 15, 23, 50), new Date(2026, 5, 16, 0, 15)), false);
 });
