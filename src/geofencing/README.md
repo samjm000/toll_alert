@@ -1,13 +1,13 @@
 # Background geofencing — status
 
-**Android: implemented, and confirmed working on an emulator with the app in
-the foreground — but the first real-device tester got nothing at all, and
-five separate defects were found as a result. See "2026-09-09: why the first
-real tester got nothing" below before trusting any emulator result in this
-file: the passes recorded further down are real, but they only ever exercised
-a warm, foregrounded JS context, which is the one case the shipped app almost
-never runs in. iOS: implemented, out of scope for further work until there's
-a Mac for Xcode — see `ios.ts`.**
+**Android: working, and confirmed on an emulator with the app FORCE-STOPPED —
+the real-world path, and the one every earlier test pass missed.** See
+"Confirmed: cold-start detection works" for the log. Getting there took
+finding five separate defects after the first real-device tester got nothing
+at all ("2026-09-09: why the first real tester got nothing"), and correcting
+all eight geofence coordinates, three of which were off by more than their own
+radius. Still unproven on real hardware in a moving vehicle. iOS: implemented,
+never run — out of scope until there's a Mac for Xcode; see `ios.ts`.**
 The region-swapping strategy and point-in-polygon confirmation described
 below are real, working code — not stubs — built on `expo-location`'s
 CoreLocation/Android-Geofencing-API wrappers and `expo-task-manager`:
@@ -776,10 +776,57 @@ including the Android 11+ Settings redirect (step 4), the Diagnostics screen
 (step 4b), and the "Improve reliability" battery-optimisation dialog. Those
 need a human looking at the screen.
 
-**Status**: this script has never been run against a real device — it was
-written in an environment with no Android SDK. Treat its first run as also
-being a test of the script. If it reports something implausible, check it by
-hand against the steps below before believing it.
+**Status**: first run against a real emulator on 2026-09-09 (API 35). See
+"Confirmed: cold-start detection works" below — the app passed, the script's
+default timeout did not, and has been corrected.
+
+### Confirmed: cold-start detection works (2026-09-09, emulator, API 35)
+
+**The first genuinely meaningful test result this project has produced.** A
+preview build, app force-stopped and confirmed dead with `pidof`, position
+injected at Dartford's corrected coordinates. The on-device log:
+
+```
+12:33:52.642  app            Re-armed background monitoring at launch
+12:33:52.874  geofence-task  ENTER crossing:dartford-crossing
+12:33:52.897  detection      Dartford detected (geofence)
+12:33:53.216  notifications  Posted "Dartford detected"
+```
+
+Everything the 2026-09-09 rework set out to fix is confirmed working:
+
+- **Cold-start hydration** — the process was dead; Android relaunched it and
+  the engine rebuilt its state and delivered the alert.
+- **Dedup** — a repeat ENTER five seconds later logged
+  `ENTER Dartford ignored — already recorded as inside (dedup)`.
+- **The ULEZ two-tier path** — `Started fine location updates (inside a zone
+  wake circle)`, then a real fix at `51.4647,0.2586 (±100m)`.
+- **No false ULEZ alert at Dartford** — the regression that produced two
+  notifications from one crossing in the first 2026-09-05 pass.
+- **All 9 regions registered** with the corrected coordinates, e.g.
+  `crossing:dartford-crossing@51.4647,0.2586/1400m`.
+
+### The measured number that matters: ~144 seconds
+
+Position injected at ~12:31:28, ENTER delivered at 12:33:52. **That is 144
+seconds**, with a process relaunch included.
+
+This is the first real figure this project has had for something its comments
+had only ever described as "into minutes", and it has two consequences:
+
+1. **The test's 120s default timeout failed a run that had worked** — by 24
+   seconds. It reported "never appeared" for a notification already on its
+   way. The default is now 300s (`DEFAULT_TIMEOUT_SECONDS`), and the failure
+   message tells you to check the log before believing it.
+2. **Latency is not a miss.** Android records the transition and delivers when
+   it can, so a late alert still reaches the user — and two minutes is nothing
+   against a payment deadline measured in days. What a large radius actually
+   buys is the chance that the OS *samples location at all* while the vehicle
+   is inside; it does not need to deliver before the vehicle leaves.
+
+One measurement on one emulator is not a distribution. A real device, moving,
+with cell and Wi-Fi positioning available, may well be faster. Treat 144s as
+the one data point it is.
 
 ### The three tests that actually matter
 

@@ -155,6 +155,22 @@ function readCrossings() {
  * Test cases
  * ------------------------------------------------------------------ */
 
+/**
+ * How long to wait for a notification before calling a case failed.
+ *
+ * MEASURED, not guessed. The first real emulator run (2026-09-09, API 35)
+ * delivered a Dartford ENTER **144 seconds** after the position was injected
+ * — with the app force-stopped, so Android had to relaunch the process too.
+ * The original 120s default therefore failed a run that had actually worked,
+ * 24 seconds before the notification arrived, and reported "never appeared"
+ * for a detection that was on its way.
+ *
+ * 300s is a little over twice the one figure we have. Android makes no
+ * delivery-latency guarantee at all, and a false failure here is far more
+ * expensive than a slow pass: it sends you debugging working code.
+ */
+const DEFAULT_TIMEOUT_SECONDS = 300;
+
 const ELSEWHERE = { latitude: 55.9533, longitude: -3.1883, label: 'Edinburgh' };
 const TRAFALGAR = { latitude: 51.508, longitude: -0.1281, label: 'Trafalgar Square' };
 
@@ -358,11 +374,19 @@ async function runCase(testCase, { cold, timeoutSeconds }) {
   let hitAfterMs = null;
 
   if (testCase.expect.length) {
+    // Ticks every 30s. Android's delivery latency runs into minutes, so a
+    // silent five-minute wait looks indistinguishable from a hung script.
+    let nextTickAt = startedAt + 30000;
     while (Date.now() < deadline) {
       seen = postedTitles();
       if (testCase.expect.every((t) => seen.has(t))) {
         hitAfterMs = Date.now() - startedAt;
         break;
+      }
+      if (Date.now() >= nextTickAt) {
+        const waited = Math.round((Date.now() - startedAt) / 1000);
+        console.log(`  …waiting (${waited}s of ${limit}s) — Android delivery latency is normally 1-3 minutes`);
+        nextTickAt += 30000;
       }
       await sleep(3000);
     }
@@ -374,7 +398,14 @@ async function runCase(testCase, { cold, timeoutSeconds }) {
 
   const problems = [];
   for (const title of testCase.expect) {
-    if (!seen.has(title)) problems.push(`expected "${title}" but it never appeared within ${limit}s`);
+    if (!seen.has(title)) {
+      problems.push(
+        `expected "${title}" but it never appeared within ${limit}s. ` +
+          'Check the on-device log before assuming detection failed — a delivery that lands ' +
+          'after the timeout looks identical to one that never happened: ' +
+          'adb logcat -d -s ReactNativeJS | findstr TollAlert'
+      );
+    }
   }
   for (const title of testCase.forbid) {
     if (seen.has(title)) problems.push(`"${title}" fired but should not have`);
@@ -435,7 +466,7 @@ async function main() {
   }
 
   const cold = !flag('--no-cold');
-  const timeoutSeconds = Number(value('--timeout') ?? 120);
+  const timeoutSeconds = Number(value('--timeout') ?? DEFAULT_TIMEOUT_SECONDS);
 
   console.log('Toll Alert - automated geofence detection test');
   console.log('='.repeat(62));
