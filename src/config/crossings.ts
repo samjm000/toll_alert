@@ -30,10 +30,14 @@ import { ULEZ_BOUNDARY, ULEZ_BOUNDARY_META } from './ulezBoundary';
  *    `radiusMeters` is no longer a flat 250m guess everywhere — it's
  *    reasoned per crossing from its type and realistic driving speed
  *    (2026-09-06), not measured data. There deliberately isn't, and won't
- *    be, any tester-facing logging/telemetry/upload to gather real
- *    detection data — testers are non-technical, and the only feedback
- *    channel is Rob asking each one directly, in plain language, whether
- *    and roughly when they got an alert. So this is a best-reasoned
+ *    be, any telemetry or automatic upload to gather real detection data —
+ *    testers are non-technical. (Since 2026-09-09 there IS an on-device
+ *    diagnostic log at Settings -> Diagnostics, which the tester can choose
+ *    to Share; that's a manual, opt-in channel, not telemetry, and it exists
+ *    because the first real tester drive produced no evidence of any kind —
+ *    see src/geofencing/README.md.) Rob still asks each tester directly, in
+ *    plain language, whether and roughly when they got an alert. So this is
+ *    a best-reasoned
  *    starting point, not a placeholder to be replaced by measured data
  *    later; treat any future adjustment as "reasoned again, better" rather
  *    than "finally measured." Three categories, explained at each
@@ -258,6 +262,17 @@ export const MOCK_CROSSINGS_CONFIG: CrossingsConfig = {
         // carries the majority of traffic and has no GPS obstruction, but
         // the tunnel-specific last-fix/first-fix risk isn't separately
         // addressed — flagging rather than pretending one circle solves it.
+        //
+        // UNRESOLVED, 2026-09-09: the centre above appears to sit ~510-540m
+        // EAST of the A282 carriageway (measured against QEII bridge
+        // mid-span and the published crossing coordinate). If that holds, a
+        // 600m circle gives a chord of only ~620m across the driven route —
+        // roughly 20 seconds inside at 70mph, against transition latency
+        // this project has already measured in minutes, so it would likely
+        // miss even with everything else working. Verify against OS
+        // OpenData/OSM and re-derive both centre and radius before the next
+        // tester drive; deliberately NOT adjusted here, because replacing
+        // one unverified guess with another isn't an improvement.
         radiusMeters: 600,
       },
       price: {

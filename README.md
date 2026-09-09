@@ -76,8 +76,16 @@ What's real:
   component), renewal-reminder and lapsed-reminder cadence shown, clearly
   labeled as demo-only (no StoreKit/Play Billing yet).
 - Settings screen: read-only list of monitored crossings sourced from the
-  same mock config, permission status placeholders, and the liability
-  disclaimer text again, tagged `PLACEHOLDER — TBD BY SOLICITOR`.
+  same mock config, **live** location/notification permission status (these
+  were hardcoded "Mocked" placeholders until 2026-09-09 — see below), and the
+  liability disclaimer text again, tagged `PLACEHOLDER — TBD BY SOLICITOR`.
+- Diagnostics screen (Settings → Troubleshooting → Diagnostics): what the OS
+  actually has registered, a plain-English list of anything blocking
+  detection, and a persistent on-device event log with a Share button.
+  Added after the first real-device tester drove over a monitored crossing
+  and got nothing, with no evidence anywhere of why — see
+  `src/geofencing/README.md`, "why the first real tester got nothing".
+  Nothing is ever uploaded automatically; the tester chooses to share.
 
 Run it (Expo web is what was used to screenshot the flow, since this
 sandbox has no iOS/Android simulator):

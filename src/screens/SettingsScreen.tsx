@@ -1,5 +1,5 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BackgroundLocationRationaleModal } from '../components/BackgroundLocationRationaleModal';
@@ -10,6 +10,9 @@ import { colors, radii, spacing } from '../theme';
 import { RootStackParamList } from '../navigation/types';
 import { MOCK_CROSSINGS_CONFIG } from '../config/crossings';
 import { requestIgnoreBatteryOptimizations } from '../geofencing/batteryOptimization';
+import { geofencing } from '../geofencing';
+import { EngineStatus } from '../geofencing/types';
+import { getNotificationPermissionStatus } from '../notifications';
 import { useAppState } from '../state/AppState';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
@@ -18,6 +21,26 @@ export function SettingsScreen({ navigation }: Props) {
   const { resetOnboarding, backgroundMonitoringEnabled, setBackgroundMonitoringEnabled } = useAppState();
   const [togglingMonitoring, setTogglingMonitoring] = useState(false);
   const [rationaleVisible, setRationaleVisible] = useState(false);
+
+  // Real, live permission state. These two rows used to be hardcoded
+  // "Mocked" pills, which meant the one screen a tester would look at to
+  // answer "why did nothing happen?" showed the same thing whether every
+  // permission was granted or none of them were.
+  const [engineStatus, setEngineStatus] = useState<EngineStatus | null>(null);
+  const [notificationStatus, setNotificationStatus] = useState<string>('…');
+
+  const refreshStatus = useCallback(async () => {
+    const [status, notifications] = await Promise.all([
+      geofencing.getStatus().catch(() => null),
+      getNotificationPermissionStatus(),
+    ]);
+    setEngineStatus(status);
+    setNotificationStatus(notifications);
+  }, []);
+
+  useEffect(() => {
+    refreshStatus();
+  }, [refreshStatus, backgroundMonitoringEnabled]);
 
   const enableMonitoring = async () => {
     setTogglingMonitoring(true);
@@ -95,13 +118,35 @@ export function SettingsScreen({ navigation }: Props) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Permissions</Text>
           <Card style={styles.permRow}>
-            <Text style={styles.permLabel}>Location — Always</Text>
-            <StatusPill label="Mocked" tone="neutral" />
+            <Text style={styles.permLabel}>Location — while using the app</Text>
+            <StatusPill {...permissionPill(engineStatus?.foregroundLocationStatus)} />
+          </Card>
+          <Card style={styles.permRow}>
+            <Text style={styles.permLabel}>Location — all the time</Text>
+            <StatusPill {...permissionPill(engineStatus?.backgroundLocationStatus)} />
           </Card>
           <Card style={styles.permRow}>
             <Text style={styles.permLabel}>Notifications</Text>
-            <StatusPill label="Mocked" tone="neutral" />
+            <StatusPill {...permissionPill(notificationStatus)} />
           </Card>
+          <Text style={styles.sectionCaption}>
+            "All the time" and Notifications both have to say Granted. Either one missing means a
+            crossing detected while the app is closed produces nothing at all.
+          </Text>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Troubleshooting</Text>
+          <Pressable onPress={() => navigation.navigate('Diagnostics')}>
+            <Card style={styles.permRow}>
+              <Text style={styles.permLabel}>Diagnostics</Text>
+              <Text style={styles.chevron}>›</Text>
+            </Card>
+          </Pressable>
+          <Text style={styles.sectionCaption}>
+            Shows whether monitoring is genuinely armed, plus a log of every geofence event the phone
+            has delivered. This is the first place to look if an expected alert never arrived.
+          </Text>
         </View>
 
         <View style={styles.section}>
@@ -188,6 +233,19 @@ export function SettingsScreen({ navigation }: Props) {
       />
     </SafeAreaView>
   );
+}
+
+/**
+ * Maps a raw permission string onto the pill's vocabulary. "Granted" vs
+ * anything else is the distinction that matters — an undetermined permission
+ * and a denied one both mean no alerts.
+ */
+function permissionPill(status: string | undefined): { label: string; tone: 'neutral' | 'success' | 'warning' | 'danger' } {
+  if (!status || status === '…' || status === 'unknown') return { label: 'Checking…', tone: 'neutral' };
+  if (status === 'granted') return { label: 'Granted', tone: 'success' };
+  if (status === 'unsupported') return { label: 'N/A', tone: 'neutral' };
+  if (status === 'undetermined') return { label: 'Not asked', tone: 'warning' };
+  return { label: 'Denied', tone: 'danger' };
 }
 
 const styles = StyleSheet.create({

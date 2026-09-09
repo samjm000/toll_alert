@@ -11,6 +11,101 @@ the ULEZ zone) and reminds the user to pay before the deadline. See
 `README.md` for the full feature/architecture rundown and
 `src/geofencing/README.md` for the geofencing engine specifically.
 
+## 2026-09-09 session: first real tester got no notification
+
+**Report**: a tester (Rob's son, Samsung Android) installed the APK from
+`https://expo.dev/artifacts/eas/JmzsZvYUhSdgFVMFzlzoAPRaRaW5W25rRdXm8flymWE.apk`,
+drove over the Dartford Crossing and through the ULEZ, and got nothing —
+no alert, no anything.
+
+### Diagnosis
+
+Five defects in the code, any one of which alone produces exactly that
+symptom. Full write-up with the reasoning is in `src/geofencing/README.md`
+under "2026-09-09: why the first real tester got nothing"; summary:
+
+1. Background monitoring was off by default, buried in Settings, and not
+   persisted — the toggle reset to Off on every launch and nothing re-ran
+   `geofencing.start()`.
+2. **The core bug**: the engine's `state.crossings`/`state.onDetected` lived
+   only in module memory set by `start()`. Android relaunches the app
+   headlessly to deliver geofence transitions, into a JS context where
+   `start()` never ran, so every real detection matched against an empty
+   array and hit a silent `return`.
+3. Notification permission (Android 13+ `POST_NOTIFICATIONS`) was requested
+   at the moment of detection, from a headless task that cannot show a
+   dialog — so it could only ever fail, silently.
+4. No explicit Android notification channel, so importance fell back to the
+   platform default (silent shade entry on One UI, no banner).
+5. The notification was fired without being awaited; a task returning first
+   can have its JS context torn down before the notification posts.
+
+**Key diagnostic detail worth remembering**: the tester saw no *persistent*
+"Toll Alert is watching for crossings" foreground-service notification
+either. Dartford sits inside ULEZ's 37 km wake circle, so on a working build
+that one should have been on screen for the whole drive. Its absence is what
+distinguishes "never armed" from "armed but failed" — ask about it first
+next time.
+
+### Also worth checking before blaming the code
+
+`eas.json` only produces an `.apk` from the `development` (which sets
+`developmentClient: true`) and `preview` profiles; `production` produces an
+AAB. The build recorded in the 2026-09-06 entry below was a production AAB,
+so the `.apk` the tester installed came from one of the other two. **If it
+was a `development` build it boots to the expo-dev-client launcher and needs
+a Metro server — it cannot run standalone at all**, which would explain the
+symptom on its own before any of the above. This session could not confirm
+which profile it was (no EAS login, and expo.dev is blocked from this
+environment's network egress). Confirm with `eas build:list --platform
+android` before the next test drive, and hand testers a `preview` or
+`production` APK, never a `development` one.
+
+### Fixes shipped this session
+
+- `src/diagnostics/log.ts` — persistent on-device ring-buffer log
+  (AsyncStorage, 400 entries, safe from headless tasks, mirrored to
+  `console.log` for `adb logcat`). **Not telemetry** — nothing is uploaded;
+  the tester shares it manually. This respects the constraint stated in
+  `src/config/crossings.ts` (that comment has been amended to describe the
+  new manual channel).
+- `src/screens/DiagnosticsScreen.tsx` — Settings → Troubleshooting →
+  Diagnostics. Leads with a plain-English blocker list a non-technical
+  tester can read aloud ("Location is not set to Allow all the time"),
+  then the raw status and log, plus Share/Clear.
+- `src/state/persistence.ts` — AsyncStorage for the monitoring toggle,
+  crossing events, and the engine's inside/outside dedup map. All three
+  previously lived only in memory.
+- `src/geofencing/detection.ts` — one shared detection pipeline used by both
+  the React path and the headless path, so a simulated and a real crossing
+  do identical things.
+- `engine.ts` — `ensureHydrated()` (memoised against burst delivery),
+  persisted dedup, `getStatus()`, awaited detection chain, and **no silent
+  returns**: every previously-silent path now logs.
+- `AppState.tsx` — persists and re-arms monitoring at launch.
+- `notifications/index.ts` — explicit MAX-importance Android channel,
+  foreground-only permission requests, loud logging on a dropped alert.
+- `HomeScreen.tsx` — "Live tracking active" now reflects whether the engine
+  is actually armed, not the mock subscription flag. Showing it off the back
+  of a demo subscription is part of why the tester believed it was working.
+- `app.json` — `POST_NOTIFICATIONS` declared explicitly.
+
+Verified: `npx tsc --noEmit` clean, `npm test` 7/7. **Not verified on a
+device or emulator** — this environment has no Android SDK and expo.dev/
+docs.expo.dev are both blocked by network egress policy. The emulator plan in
+`src/geofencing/README.md` still applies and should be re-run, this time
+with the app **force-stopped** (`adb shell am force-stop com.tollalert.app`)
+before injecting the mock fix — that is the case every previous pass missed.
+
+### Still open (not fixed here)
+
+Dartford's geofence centre (51.4657, 0.2649) appears to sit ~510-540m east
+of the A282 carriageway. With `radiusMeters: 600` that is ~20 seconds inside
+at 70mph against latency measured in minutes — likely to miss even with
+everything above fixed. Deliberately not "corrected" to another unverified
+guess; needs OS OpenData/OSM. Flagged inline in `src/config/crossings.ts`.
+The same check is owed to the other seven crossings.
+
 ## 2026-09-06 session
 
 ### Radius correction (committed `ed667a9`)

@@ -1,10 +1,13 @@
 # Background geofencing — status
 
-**Android: implemented AND run end-to-end on a real Android emulator —
-mock-GPS crossing detection, the real notification, and the enter/exit
-dedup fix all confirmed working (see "Confirmed by actually running this"
-below). iOS: implemented, out of scope for further work until there's a Mac
-for Xcode — see `ios.ts`.**
+**Android: implemented, and confirmed working on an emulator with the app in
+the foreground — but the first real-device tester got nothing at all, and
+five separate defects were found as a result. See "2026-09-09: why the first
+real tester got nothing" below before trusting any emulator result in this
+file: the passes recorded further down are real, but they only ever exercised
+a warm, foregrounded JS context, which is the one case the shipped app almost
+never runs in. iOS: implemented, out of scope for further work until there's
+a Mac for Xcode — see `ios.ts`.**
 The region-swapping strategy and point-in-polygon confirmation described
 below are real, working code — not stubs — built on `expo-location`'s
 CoreLocation/Android-Geofencing-API wrappers and `expo-task-manager`:
@@ -33,6 +36,98 @@ CoreLocation/Android-Geofencing-API wrappers and `expo-task-manager`:
   optimizations" dialog for this app via `expo-intent-launcher`, surfaced as
   the "Improve reliability" button in the Settings screen's "Reliability"
   section.
+
+## 2026-09-09: why the first real tester got nothing, and what changed
+
+The first real-device tester (Samsung, Android; drove over Dartford and
+through the ULEZ) received **no notification at all** — not even the
+persistent "Toll Alert is watching for crossings" foreground-service
+notification. That last detail is the diagnostic one: that notification
+appears the moment the fine-location task starts, and Dartford sits inside
+ULEZ's 37 km wake circle, so on a working build it should have been on
+screen for the whole drive. Its absence says monitoring was never armed at
+all, rather than armed-but-failing.
+
+Five separate defects were found, each of which alone is sufficient to
+produce exactly "nothing happened". They are listed in the order they bite.
+
+**1. Background monitoring was off by default, and could not stay on.**
+`backgroundMonitoringEnabled` was `useState(false)` with no persistence, and
+nothing called `geofencing.start()` at launch. Onboarding's Permissions
+screen explicitly *doesn't* request anything and defers to "the Settings
+screen's Background monitoring toggle" — which a non-technical tester has no
+reason to find. Even a tester who did find it lost it on the next app
+restart: the toggle read "Off" again and `start()` never re-ran. Fixed: the
+flag is persisted (`src/state/persistence.ts`) and re-armed from a mount
+effect in `AppState`.
+
+**2. The engine could not survive process death — the core bug.**
+`state.crossings` and `state.onDetected` lived only in module memory, set
+only by `start()`. But the whole design depends on the OS relaunching the app
+*headlessly* to deliver a transition: a fresh JS context where module scope
+runs (so `defineTask` registers) but `start()` never does. The task fired
+correctly, `state.crossings.find(...)` searched an empty array, and the
+handler hit a bare `return`. **Every real crossing detected while the app
+wasn't already running was silently discarded.** The emulator passes in the
+sections above never caught this because the app was in the foreground with
+Metro attached and `start()` had just run in that same context.
+Fixed: `ensureHydrated()` re-derives the crossing list via the new
+`EngineConfig.loadCrossings`, the inside/outside dedup map is persisted, and
+a detection with no React handler registered falls through to the shared
+headless pipeline in `detection.ts`.
+
+**3. Notification permission was requested at the moment of detection.**
+`presentCrossingNotification` called `requestNotificationPermissions()`
+inline and returned silently on failure. Android 13+ gates notifications
+behind runtime `POST_NOTIFICATIONS`, and a headless task cannot show a
+permission dialog — so on a device that had never granted it, the request
+could only ever fail, silently, forever. Fixed: permission is requested in
+the foreground when monitoring is enabled; the detection path only *checks*,
+and logs loudly when it has to drop an alert.
+
+**4. Notifications were posted without an explicit Android channel.**
+Android 8+ takes importance from the channel, not the request. Without a
+high-importance channel a successful detection can post silently into the
+shade with no banner and no sound — indistinguishable from nothing
+happening, particularly on One UI. Fixed: an explicit `crossing-alerts`
+channel at `AndroidImportance.MAX`.
+
+**5. The notification was fired without being awaited.**
+`recordCrossing` did `presentCrossingNotification(...).catch(() => {})` and
+the task handlers were synchronous. A background task that returns before
+its notification promise resolves can have its JS context torn down first.
+Fixed: `CrossingDetectedHandler` now returns a promise and the engine awaits
+the whole chain.
+
+### Still open: Dartford's geofence barely touches the road
+
+Separate from the above, and unfixed because it needs surveyed data this
+session could not reach. The configured centre (51.4657, 0.2649) is roughly
+**510-540 m** from the A282 carriageway on the landmark references available
+(QEII bridge mid-span ~512 m; the Wikipedia crossing coordinate ~539 m). With
+`radiusMeters: 600` that leaves a chord across the circle of only ~620 m —
+about **20 seconds inside at 70 mph**, against geofence transition latency
+this project has already measured "into minutes". Even with every defect
+above fixed, that is likely to miss. Verify the coordinate against OS
+OpenData/OSM and re-derive the radius from the true offset before the next
+tester drive; the same check is owed to the other seven crossings, all of
+which are still `coordinatesVerified: false`.
+
+### Diagnosing this in future
+
+`src/diagnostics/log.ts` is a persistent on-device log, surfaced at
+Settings -> Diagnostics with a blocker summary a non-technical tester can
+read aloud, and a Share button. It respects the project's
+no-telemetry constraint: nothing is uploaded, ever; the tester chooses to
+send it. Every previously-silent path now writes to it — task errors, empty
+payloads, unmatched region identifiers, permission refusals, and
+`startLocationUpdatesAsync` failures (Android 12+ can refuse to start a
+location foreground service from the background, which used to be swallowed
+by a bare `.catch(() => {})` and made total ULEZ failure invisible).
+
+The Diagnostics screen also reads back what the **OS** believes
+(`getStatus()`), not what the UI's toggle claims. Those two disagreeing is
+the signature of every bug above.
 
 ## Why one task, not one per crossing
 
