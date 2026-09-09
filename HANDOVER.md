@@ -60,6 +60,48 @@ Nothing schedules either. The app promises reminders in its own UI that no
 code delivers. Whoever builds crossing reminders should decide whether these
 are in the same piece of work.
 
+## NOT BUILT: chargeable-hours awareness (verified 2026-09-09)
+
+Same class of gap as reminders, found the same way. **No time-of-day logic
+exists anywhere in the app.** `grep` for `getHours`, `freeHours`, `isFree`,
+`22:00` etc. finds nothing outside display-label strings. `Crossing.price`
+is `{ amount, currency, label }` — there is nowhere in the data model to put
+a chargeable window. `detection.ts` records `detectedAt` and never consults
+it before firing.
+
+**Three of the nine crossings are free overnight, and all three will fire
+false alerts in that window:**
+
+| Crossing | Free window | Current behaviour |
+|---|---|---|
+| Dartford | 22:00-06:00 | Alerts anyway |
+| Blackwall | 22:00-06:00 | Alerts anyway |
+| Silvertown | 22:00-06:00 | Alerts anyway |
+
+A night-shift driver crossing Dartford at 3am is woken and told to pay £3.50
+they do not owe. That is the worst kind of false positive: it teaches people
+to ignore the app. Partial mitigation only — the notification body includes
+the price label verbatim, so a 3am Dartford alert does read "Pay £3.50 (car)
+— free 22:00-06:00...", which a careful reader might catch.
+
+Sources for the TfL window (Blackwall/Silvertown charge applies 06:00-22:00
+daily, free otherwise, free all day on 25 December): blackcircles.com,
+epcplc.com, minicabs.co.uk — published sources, not TfL directly, so
+re-check against tfl.gov.uk before coding to them.
+
+There is further time-sensitivity the app cannot express: the TfL tunnels'
+peak rates are **directional** (northbound 06:00-10:00, southbound
+16:00-19:00, weekdays only). The app has no concept of direction or time, so
+its "£1.50 to £4.00" label is the best it can currently do.
+
+### Do this with the reminder work, not separately
+
+Chargeable windows, the ULEZ daily-charge collapse, and reminders all answer
+the same question — *should this detection actually produce an alert, and
+when?* — and all touch `detection.ts`. Doing them in one pass avoids
+touching that path three times. Deferred 2026-09-09 at the user's request,
+pending the client's decision on reminder frequency.
+
 ### Open questions for the client before building
 
 1. How many reminders and when — anchored to the crossing, or to the
