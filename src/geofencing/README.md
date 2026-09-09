@@ -724,6 +724,48 @@ Also updated: every mock coordinate and radius quoted below changed on
 seven crossings" above). The old figures in earlier revisions of this file
 are wrong.
 
+### Run the automated script first
+
+`npm run test:emulator` (`scripts/emulator-test.mjs`) does most of what the
+manual steps below do, without the clicking. It needs a connected device or
+emulator with a **preview** build installed, and nothing else:
+
+```
+npm run test:emulator                              # all 10 cases
+npm run test:emulator -- --only dartford-crossing  # one case
+npm run test:emulator -- --list                    # what it will test, with coordinates
+npm run test:emulator -- --timeout 240             # slower device
+npm run test:emulator -- --no-cold                 # leave the app running
+```
+
+What it does, per case: grants the four permissions, enables mock location,
+moves the device far away, **force-stops the app and confirms with `pidof`
+that the process is actually gone**, injects the crossing's coordinates, then
+polls `dumpsys notification` until the expected alert appears — and greps
+logcat for `Cold-start hydrate` to prove the headless path ran rather than a
+still-warm process. It fails the case if the notification fires *without*
+that line, because that means nothing was tested.
+
+It reads its coordinates straight out of `src/config/crossings.ts`, so it
+cannot drift from what the app ships. `--list` prints them, which is the
+quickest way to confirm that.
+
+It also checks what should **not** fire: the wrong crossing of a close pair
+(Blackwall/Silvertown at 770m, Mersey Gateway/Silver Jubilee at 1,779m), a
+ULEZ alert anywhere it isn't genuinely owed, and a negative control at
+Edinburgh where nothing at all should fire. That last one matters — without
+it, a build that fired unconditionally would pass every other case.
+
+**Not automated**, so still do these by hand: the onboarding permission flow
+including the Android 11+ Settings redirect (step 4), the Diagnostics screen
+(step 4b), and the "Improve reliability" battery-optimisation dialog. Those
+need a human looking at the screen.
+
+**Status**: this script has never been run against a real device — it was
+written in an environment with no Android SDK. Treat its first run as also
+being a test of the script. If it reports something implausible, check it by
+hand against the steps below before believing it.
+
 ### The three tests that actually matter
 
 If you only have time for three, do these, in this order:
@@ -788,7 +830,7 @@ Two options — pick whichever is more convenient:
 
 - **Cloud build (no local SDK build step needed)**:
   `eas login` once, then `npm run build:android:dev` (already scripted —
-  runs `eas build --platform android --profile development`, which
+  runs `npx eas-cli build --platform android --profile development`, which
   produces an installable `.apk` since `eas.json`'s `development` profile
   sets `buildType: apk`). Download the APK when it finishes and drag it
   onto the running emulator window to install, or
@@ -1109,14 +1151,56 @@ based:
   Hull — pick whichever cluster is closest to you rather than trying to
   cover all eight in person.
 
-## Wired into the app — via a Settings toggle, not auto-start
+## Wired into the app — armed during onboarding
 
-`AppState.setBackgroundMonitoringEnabled(true)` calls `geofencing.requestPermissions()`
-then `geofencing.start()`; the Settings screen's "Background monitoring" row
-drives this. Deliberately an explicit opt-in toggle rather than
-auto-starting once onboarding permissions are granted, since real
-background location tracking has a battery/privacy cost a tester should
-choose to take on, not something sprung on them silently — revisit this
-default once there's a real product decision on the onboarding flow. The
-toggle is disabled on web (`Platform.OS === 'web'`), since geofencing needs
-the custom dev client on a real device to do anything at all.
+**Changed 2026-09-09. The paragraph that used to sit here described the
+opposite policy and was left stale for part of that day; if you are reading a
+cached copy saying monitoring is "a Settings toggle, not auto-start", that is
+out of date.**
+
+`AppState.setBackgroundMonitoringEnabled(true)` calls
+`geofencing.requestPermissions()` then `geofencing.start()`. **Two** things
+drive it now:
+
+1. **The last onboarding screen** ("One last thing" → *"Turn on crossing
+   alerts"*). This is the primary path.
+2. The Settings screen's "Background monitoring" row, unchanged, for anyone
+   who skipped it or wants to turn it off again.
+
+### Why this changed
+
+The previous policy was that monitoring should be an explicit Settings
+opt-in rather than something armed during onboarding — the reasoning being
+that background location has a real battery and privacy cost a tester should
+choose to take on rather than have sprung on them.
+
+That reasoning is sound in the abstract and was wrong in practice. The first
+real tester completed onboarding, saw a Home screen that claimed to be
+watching crossings, drove over the Dartford Crossing, and got nothing —
+because nothing was ever armed. A non-technical tester has no reason to go
+hunting through Settings for a toggle, and the onboarding screen's own copy
+promised a permission prompt it then didn't show. An app that silently does
+nothing is not a privacy win.
+
+The consent concern is answered by *how* it is armed, not by hiding it:
+
+- It only happens on a deliberate button press, never automatically.
+- The screen explains what will be requested and why, before requesting it.
+- **"Not now"** is right there, and leaves everything off.
+- Refusing is not a dead end — onboarding completes either way, and the
+  Settings toggle still works later.
+
+So it is still opt-in. It is just opt-in somewhere the user will actually
+see it.
+
+### Platform notes
+
+The Settings toggle is disabled on web (`Platform.OS === 'web'`), since
+geofencing needs a real native build on a real device to do anything at all.
+
+On Android 11+ arming this is a two-part affair: `requestBackgroundPermissionsAsync()`
+opens the system settings page rather than showing a dialog, and resolves
+immediately while the user is still there. `AppState` records the user's
+*intent* before requesting and re-checks on foreground resume, which is what
+actually switches monitoring on when they come back. See
+`src/state/persistence.ts` and the resume effect in `AppState.tsx`.

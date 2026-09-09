@@ -11,6 +11,47 @@ the ULEZ zone) and reminds the user to pay before the deadline. See
 `README.md` for the full feature/architecture rundown and
 `src/geofencing/README.md` for the geofencing engine specifically.
 
+## 2026-09-09 session: automated emulator test
+
+`npm run test:emulator` (`scripts/emulator-test.mjs`). Node, no new
+dependencies, cross-platform. Drives adb directly via `execFileSync` with an
+argument array rather than a shell string, so Windows quoting cannot bite.
+
+Ten cases: the eight point crossings, ULEZ via Trafalgar Square, and a
+negative control at Edinburgh where nothing should fire. Per case it grants
+permissions, enables mock location, moves far away, force-stops the app and
+**confirms with `pidof` that the process is gone**, injects the coordinates,
+polls `dumpsys notification`, and greps logcat for `Cold-start hydrate` to
+prove the headless path actually ran. A notification without that log line
+FAILS the case — that combination means the process was still warm and
+nothing was tested.
+
+Coordinates are parsed out of `src/config/crossings.ts` (same whole-line
+regex approach as `crossings.test.ts`, for the same reason: the module can't
+be imported under Node's ESM loader). `--list` prints them, which is how you
+confirm the script isn't testing stale values.
+
+**Never run against a real device** — written with no Android SDK available.
+Its first run is also a test of the script itself.
+
+Still manual: the onboarding permission flow and Android 11+ Settings
+redirect, the Diagnostics screen, and the battery-optimisation dialog.
+
+### Two environment gotchas, both cost a round trip
+
+**1. `'eas' is not recognized as an internal or external command.`**
+`package.json`'s build scripts called bare `eas`, which only resolves if
+`eas-cli` is installed globally. It never was on this machine. Fixed
+2026-09-09: both scripts now call `npx eas-cli`, which needs no global
+install. A global `npm i -g eas-cli` still works and is faster if you build
+often — the scripts work either way.
+
+**2. `The token '&&' is not a valid statement separator in this version.`**
+`&&` is not a valid separator in **Windows PowerShell 5.1** (it works in
+PowerShell 7+, and in `cmd.exe`). Chained commands copied from docs or chat —
+e.g. `npx eas-cli login && npx eas-cli whoami` — fail there. Run them on
+separate lines. Nothing to do with this project.
+
 ## 2026-09-09 session: emulator test plan revised
 
 `src/geofencing/README.md`'s "Manual testing (Android)" plan existed but was
@@ -124,7 +165,8 @@ symptom on its own before any of the above. This session could not confirm
 which profile it was (no EAS login, and expo.dev is blocked from this
 environment's network egress). Confirm with `eas build:list --platform
 android` before the next test drive, and hand testers a `preview` or
-`production` APK, never a `development` one.
+`production` APK, never a `development` one. (Use `npx eas-cli build:list
+--platform android` — see the PATH gotcha below.)
 
 ### Fixes shipped this session
 
