@@ -11,6 +11,70 @@ the ULEZ zone) and reminds the user to pay before the deadline. See
 `README.md` for the full feature/architecture rundown and
 `src/geofencing/README.md` for the geofencing engine specifically.
 
+## 2026-09-09: CONFIRMED WORKING IN A REAL-WORLD DRIVE
+
+The tester ran it on a real device on a real journey and reported it
+working. No further detail was available — no crossing name, no delay
+figure, no confirmation of whether the sound played. Recorded as-is rather
+than inflated: **detection is confirmed in the field, the latency and audio
+behaviour on real hardware are still unmeasured.**
+
+This supersedes the emulator-only status. The emulator result below is still
+the only place a *number* exists (~144s), and that number is from mock GPS on
+a stationary device, so it should not be quoted as real-world latency.
+
+Worth capturing next time a tester drives: which crossing, roughly how long
+after crossing the alert arrived, whether it made a sound, and whether
+anything fired that should not have.
+
+## NOT BUILT: payment reminders (verified 2026-09-09)
+
+**Reminders were never implemented. They were not dropped or lost.**
+Verified against the full git history, not by inspection:
+
+- `trigger: null` in every version of `src/notifications/index.ts` that has
+  ever existed, from `c2b2497` (which first introduced notifications)
+  onward.
+- `git log --all -S` finds no `timeInterval`, no
+  `SchedulableTriggerInputTypes`, no date trigger, anywhere, ever.
+- `paymentDeadlineHours` is populated for all eight schemes and declared in
+  `src/types/crossing.ts` with the comment "for reminder-scheduling
+  purposes" — and **is read by no code at all**. Dead data awaiting a
+  feature that was never written.
+- `CrossingEvent.status` is set to `'pending'` at detection and used only to
+  filter the Home screen list. Nothing acts on it over time.
+
+So the current behaviour is: **one notification, at the moment of detection,
+and never again.** A tester who swipes it away while driving — which is what
+you do while driving — is relying on memory from then on.
+
+### The same gap, user-visible, on the Subscription screen
+
+`SubscriptionScreen.tsx` tells the user, from real config values
+(`renewalReminderDaysBefore: 7`, `lapsedReminderIntervalDays: 7`):
+
+> - We'll notify you 7 days before your subscription renews
+> - If it lapses, we'll remind you every 7 days
+
+Nothing schedules either. The app promises reminders in its own UI that no
+code delivers. Whoever builds crossing reminders should decide whether these
+are in the same piece of work.
+
+### Open questions for the client before building
+
+1. How many reminders and when — anchored to the crossing, or to the
+   deadline? Deadline-anchored is more useful but needs the exact rule.
+2. Same cadence for every scheme? Dartford is midnight-the-next-day
+   (24-48h depending on crossing time); TfL tunnels and ULEZ are midnight on
+   the third day (72h). One cadence does not fit both.
+3. What happens once the deadline passes unpaid — stop silently, or switch
+   to "you may have been issued a PCN"?
+4. **ULEZ is a daily charge, not per crossing.** The engine currently fires
+   per entry (outside->inside transition, no per-day logic anywhere), so
+   driving in and out twice in a day produces two alerts for one £12.50.
+   Reminders will multiply that unless it collapses to one per day.
+5. Are the subscription reminders above in scope?
+
 ## 2026-09-09 session: FIRST CONFIRMED COLD-START DETECTION
 
 Preview build on an API 35 emulator, app force-stopped and confirmed dead
