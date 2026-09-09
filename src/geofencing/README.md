@@ -144,15 +144,69 @@ centre must be within 150m of the published coordinate, the radius must cover
 the structure and give over 60s inside at 70mph, and Dartford must not fall
 inside the ULEZ polygon (the pass-1 double-notification bug).
 
-### Still open: the other seven crossings
+### The other seven crossings, checked the same way
 
-All seven remaining point crossings are still `coordinatesVerified: false`
-landmark-level guesses, and none has been checked the way Dartford now has.
-Blackwall, Silvertown, Mersey Gateway, Silver Jubilee, Tyne Tunnel, Humber
-Bridge and Warburton could each be off by a comparable margin. The method
-that worked for Dartford — cross-checking two independent published
-coordinate sources and deriving the radius from the published structure
-length — applies directly to all of them.
+Done in the same pass. Every one of the eight point crossings was a
+landmark-level guess; **all eight were wrong**, and three were wrong by more
+than a kilometre — enough that the driven route never entered the geofence
+at all, so those crossings could never have fired regardless of any other
+fix.
+
+| Crossing | Was off by | Radius | Best source |
+|---|---|---|---|
+| Warburton | **2,467 m** | 250 -> 550 m | OS grid refs, Rixton and Warburton Bridge Order 2024 |
+| Tyne Tunnel | **2,431 m** | 300 -> 900 m | latitude.to + OS ref NZ329659 (185 m apart) |
+| Mersey Gateway | **1,707 m** | 600 -> 1,100 m | Wikipedia, confirmed by its documented offset from Silver Jubilee |
+| Silvertown | 830 m | 300 -> 350 m | Wikipedia (single source) |
+| Blackwall | 502 m | 300 -> 350 m | Wikipedia + latitude.to + OS refs for the southern structures |
+| Dartford | 449 m | 600 -> 1,400 m | Wikipedia + latitude.to (43 m apart) |
+| Humber Bridge | 436 m | 250 -> 1,150 m | Wikipedia + latitude.to (14 m apart) |
+| Silver Jubilee | 257 m | 600 -> 500 m | Wikipedia |
+
+Two of the old values were self-evidently placeholders once you look:
+Warburton's latitude was the bare string `53.4`, and Humber's 250 m radius
+did not reach the ends of a 2,220 m bridge.
+
+Radii are derived from each structure's published length where nothing else
+constrains them (half-length from the centre, rounded up to clear the
+portals), which is why they now differ so much — the structures do. Silver
+Jubilee went *down*, from 600 m to 500 m: the old comment claimed
+"motorway-speed open crossing" by copying Dartford's reasoning, but since
+Mersey Gateway opened in 2017 it carries local 30 mph traffic, so it needs
+far less radius for the same time inside.
+
+**Two pairs are close enough to constrain each other.** Geofence circles must
+not overlap, or one crossing fires two notifications naming the wrong toll
+and the wrong deadline. `crossings.test.ts` enforces this:
+
+- Mersey Gateway and Silver Jubilee are 1,779 m apart; 1,100 + 500 leaves a
+  179 m margin.
+- **Blackwall and Silvertown are only 770 m apart**; 350 + 350 leaves 70 m.
+  That is uncomfortably tight, and it caps both well below the 675 m
+  half-length of the Blackwall bore.
+
+**Blackwall and Silvertown should probably be one crossing.** Both bores
+leave the *same* point on the Greenwich Peninsula and only diverge on the
+north side, so on the southern approach no circular geofence can tell them
+apart even in principle. They already share one `ChargingScheme`, one
+operator, one payment page and one deadline — the label is the only thing
+that differs. Merging them would allow a ~900 m radius covering both bores
+instead of the 350 m compromise. Not done here because it changes the
+crossing list rather than just its coordinates.
+
+**Expected, not a bug**: Blackwall and Silvertown both fall inside the real
+ULEZ polygon, so a non-compliant vehicle using either tunnel genuinely
+incurs both charges and should get both notifications. This is not a return
+of the old placeholder-rectangle false positive — that one put *Dartford*
+inside ULEZ, which `crossings.test.ts` still guards against explicitly.
+
+`coordinatesVerified` stays `false` on all eight. OS OpenData and OSM are
+both blocked by this environment's network egress policy, so none of this is
+survey data. Where an Ordnance Survey grid reference was quoted in a
+published source it was converted to WGS84 and used as a cross-check — the
+Warburton conversion agreed with an independently quoted coordinate to 115 m,
+which is exactly the precision a 6-figure grid reference carries, and that
+agreement is also what validated the conversion itself.
 
 ### Diagnosing this in future
 

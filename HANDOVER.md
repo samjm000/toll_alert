@@ -138,14 +138,39 @@ this session is that web *search* works from here even though direct HTTP to
 overpass-api.de, nominatim, api.os.uk, expo.dev and docs.expo.dev is all
 blocked. That is how the Dartford coordinate was cross-checked.
 
-### Still open (not fixed here)
+### All eight crossings re-coordinated
 
-The other seven point crossings (Blackwall, Silvertown, Mersey Gateway,
-Silver Jubilee, Tyne Tunnel, Humber Bridge, Warburton) are all still
-`coordinatesVerified: false` landmark-level guesses and could each be off by
-a margin comparable to Dartford's 449m. None was on this tester's route, so
-they were left alone — but the same two-source cross-check plus
-structure-length radius derivation applies directly to each.
+Every point crossing was checked the same way, and **every one was wrong**.
+Three by more than a kilometre — Warburton 2,467m, Tyne Tunnel 2,431m,
+Mersey Gateway 1,707m — which is further than their own radius, so the
+driven route never entered those geofences at all and they could never have
+fired. Full table and per-crossing sourcing in `src/geofencing/README.md`.
+
+Radii are now derived from each structure's published length rather than the
+three-category guesswork, except where two crossings constrain each other.
+Silver Jubilee's radius went *down* (600 -> 500m): the old comment claimed
+"motorway-speed" by copying Dartford's reasoning, but it has carried local
+30mph traffic since Mersey Gateway opened.
+
+**Blackwall and Silvertown are only 770m apart** and should probably be
+merged into one crossing — both bores leave the same point on the Greenwich
+Peninsula, they already share a ChargingScheme, payment page and deadline,
+and no circular geofence can separate them on the southern approach. Keeping
+them apart caps both at 350m with a 70m margin. Left alone because it changes
+the crossing list, not just coordinates. This is the most worthwhile
+follow-up in the file.
+
+Tests now cover all eight centres against their published references, assert
+no two geofences overlap, and assert a minimum detectable radius — 19 tests
+total, all passing.
+
+**Method note**: OS OpenData, OSM, Overpass and Nominatim are all blocked by
+this environment's egress policy, but **web search is not**. Where a
+published source quoted an Ordnance Survey grid reference it was converted to
+WGS84 (Airy 1830 transverse-Mercator inverse + Helmert) and used as a
+cross-check. The Warburton conversion agreed with an independently quoted
+coordinate to 115m — the precision a 6-figure grid ref carries — which
+validated both the coordinate and the converter at once.
 
 ## 2026-09-06 session
 

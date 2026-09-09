@@ -359,13 +359,31 @@ export const MOCK_CROSSINGS_CONFIG: CrossingsConfig = {
       type: 'point',
       geofence: {
         kind: 'circle',
-        // Tower Hamlets/Greenwich — approximate, verify precisely.
-        latitude: 51.5028,
-        longitude: 0.0037,
+        // CORRECTED 2026-09-09. Was (51.5028, 0.0037) — 502m from the
+        // published coordinate below, almost all of it in longitude.
+        // 51°30'16"N 0°00'11"W (Wikipedia's Blackwall Tunnel infobox),
+        // cross-checked two ways: latitude.to gives 51.5027,-0.0018 (212m
+        // away), and Historic England's listed-structure grid references
+        // for the southern gatehouse (TQ390794) and southern ventilation
+        // shaft (TQ390800) convert to points 931m and 292m SOUTH of it —
+        // the right distances and the right direction for a 1,350m tunnel
+        // whose midpoint this is. Note the crossing sits on the Greenwich
+        // Meridian, so longitude is near zero and its SIGN flips between
+        // sources; don't read that as a source disagreeing.
+        latitude: 51.50444,
+        longitude: -0.00306,
         // Tunnel portal — GPS drops out inside, so this only needs to
         // reliably catch a fix right at the entrance, not cover the
         // tunnel's length (impossible with GPS regardless of radius).
-        radiusMeters: 300,
+        //
+        // CONSTRAINED BY SILVERTOWN, not by this tunnel's own geometry.
+        // The two published midpoints are only 770m apart, so the two
+        // radii must sum to less than that or one crossing fires both
+        // notifications. 350m each is the most that leaves a margin. This
+        // is smaller than the 675m half-length of the bore, and is a
+        // deliberate compromise — see the note on Silvertown below for why
+        // merging these two into a single crossing is the real fix.
+        radiusMeters: 350,
       },
       price: {
         amount: 4.0,
@@ -384,10 +402,30 @@ export const MOCK_CROSSINGS_CONFIG: CrossingsConfig = {
       type: 'point',
       geofence: {
         kind: 'circle',
-        latitude: 51.4973,
-        longitude: 0.0093,
-        // Tunnel portal — same reasoning as Blackwall above.
-        radiusMeters: 300,
+        // CORRECTED 2026-09-09. Was (51.4973, 0.0093), 830m from the
+        // published coordinate: 51°30'17"N 0°00'29"E (Wikipedia's
+        // Silvertown Tunnel infobox; the tunnel opened 7 April 2025). Only
+        // one source found for this one, so it carries less corroboration
+        // than the others — but it is consistent with Wikipedia's prose
+        // description of a portal "adjacent to the existing Blackwall
+        // Tunnel on the Greenwich Peninsula", which the old value was not.
+        latitude: 51.50472,
+        longitude: 0.00806,
+        // Tunnel portal — same reasoning as Blackwall above, and the same
+        // 770m-separation constraint (see there).
+        //
+        // THESE TWO SHOULD PROBABLY BE ONE CROSSING. Both bores leave the
+        // SAME point on the Greenwich Peninsula and only diverge on the
+        // north side, so on the southern approach no circular geofence can
+        // tell them apart even in principle — and they already share one
+        // ChargingScheme (TFL_TUNNELS_SCHEME), one operator, one payment
+        // page and one deadline, so the label is the only thing that
+        // differs. Merging them into a single "Blackwall & Silvertown"
+        // crossing would allow a ~900m radius that actually covers both
+        // bores instead of the 350m compromise forced by keeping them
+        // apart. Not done here because it changes the crossing list rather
+        // than just its coordinates.
+        radiusMeters: 350,
       },
       price: {
         amount: 4.0,
@@ -406,11 +444,25 @@ export const MOCK_CROSSINGS_CONFIG: CrossingsConfig = {
       type: 'point',
       geofence: {
         kind: 'circle',
-        // Runcorn/Widnes — approximate, verify precisely.
-        latitude: 53.3406,
-        longitude: -2.7286,
+        // CORRECTED 2026-09-09. Was (53.3406, -2.7286) — 1,707m off, the
+        // second-worst error in this file. Now 53°21'10"N 2°42'47"W
+        // (Wikipedia's Mersey Gateway Bridge infobox).
+        //
+        // A third source (latitude.to) gives -2.7000, which is 863m east of
+        // this and was rejected on an internal consistency check rather
+        // than by preferring one site over another: the bridge is
+        // documented as ~1.5km upstream (east) of the Silver Jubilee
+        // Bridge, and -2.7130 is 1.78km east of Silver Jubilee's own
+        // published coordinate while -2.7000 would be ~2.6km east.
+        latitude: 53.3528,
+        longitude: -2.7130,
         // Motorway-speed open crossing — same reasoning as Dartford above.
-        radiusMeters: 600,
+        // Radius is the published 2.2km total crossing length halved
+        // (1,100m from the centre), which covers the whole structure over
+        // both the Mersey and the Manchester Ship Canal and gives ~82s
+        // inside at 60mph. It is also the largest value that stays clear
+        // of Silver Jubilee's circle 1,779m away — see below.
+        radiusMeters: 1100,
       },
       price: {
         amount: 2.1,
@@ -429,10 +481,23 @@ export const MOCK_CROSSINGS_CONFIG: CrossingsConfig = {
       type: 'point',
       geofence: {
         kind: 'circle',
-        latitude: 53.3453,
-        longitude: -2.7345,
-        // Motorway-speed open crossing — same reasoning as Dartford above.
-        radiusMeters: 600,
+        // CORRECTED 2026-09-09. Was (53.3453, -2.7345), 257m off — the
+        // smallest error of the seven. Now 53°20'48"N 2°44'16"W
+        // (Wikipedia's Silver Jubilee Bridge infobox).
+        latitude: 53.3466,
+        longitude: -2.7377,
+        // NOT motorway-speed, despite what the old comment claimed by
+        // copying Dartford's reasoning. Since Mersey Gateway opened in
+        // 2017 this bridge carries local traffic at 30mph, not 60-70mph
+        // through traffic, so it needs far less radius for the same time
+        // inside: 500m gives ~75s at 30mph. That covers the 482m structure
+        // comfortably.
+        //
+        // Capped by its neighbour as much as by its own geometry: Mersey
+        // Gateway's centre is 1,779m away, so 1,100m + 500m leaves a 179m
+        // margin between the two circles. Widening either one past that
+        // makes a single crossing fire two different notifications.
+        radiusMeters: 500,
       },
       price: {
         amount: 2.1,
@@ -451,16 +516,31 @@ export const MOCK_CROSSINGS_CONFIG: CrossingsConfig = {
       type: 'point',
       geofence: {
         kind: 'circle',
-        // Jarrow/Howdon — approximate, verify precisely. Covers both bores.
-        latitude: 54.9857,
-        longitude: -1.4466,
+        // CORRECTED 2026-09-09. Was (54.9857, -1.4466) — 2,431m off, and
+        // the joint-worst error in this file. That put the geofence out
+        // towards North Shields, nowhere near the bores.
+        //
+        // Now 54.9860, -1.4847 (latitude.to), corroborated by converting
+        // the Ordnance Survey grid reference for the adjacent Tyne
+        // pedestrian and cyclist tunnels (NZ329659) to WGS84, which lands
+        // 185m away. Two independent sources, one of them an OS grid
+        // reference, agreeing at 185m on a crossing whose bores run
+        // side by side.
+        latitude: 54.986,
+        longitude: -1.4847,
         // Tunnel portal, not motorway-speed-open, despite the approach
         // roads being motorway-speed: unlike Dartford, both directions
         // here go through a bore (no open-air alternative), so the
         // GPS-drops-out-inside-the-tunnel problem is the dominant risk for
         // this crossing specifically — same reasoning as Blackwall/
         // Silvertown above, not the open-bridge crossings.
-        radiusMeters: 300,
+        //
+        // Radius from the published 1,690m tunnel length halved (845m),
+        // rounded to 900m so it clears both portals. Unlike Blackwall and
+        // Silvertown there is no neighbouring crossing to stay clear of, so
+        // the structure's own geometry is the only constraint. ~80s inside
+        // at 50mph on the A19.
+        radiusMeters: 900,
       },
       price: {
         amount: 2.6,
@@ -479,14 +559,27 @@ export const MOCK_CROSSINGS_CONFIG: CrossingsConfig = {
       type: 'point',
       geofence: {
         kind: 'circle',
-        // Hessle/Barton-upon-Humber — approximate, verify precisely.
-        latitude: 53.7101,
-        longitude: -0.4478,
-        // Lower-speed / constrained crossing — kept at 250m like the other
-        // lower-speed-category crossing (Warburton, below) rather than
-        // treated as a special case; see the file-level comment's
-        // "Lower-speed / constrained crossings" category.
-        radiusMeters: 250,
+        // CORRECTED 2026-09-09. Was (53.7101, -0.4478), 436m off. Now
+        // 53°42'23"N 0°27'00"W (Wikipedia's Humber Bridge infobox),
+        // corroborated by latitude.to's 53.7064,-0.4502 — the two agree to
+        // within 14m, the tightest agreement of any crossing in this file.
+        latitude: 53.7064,
+        longitude: -0.45,
+        // Radius from the published 2,220m total length halved (1,110m),
+        // rounded up to 1,150m. The old 250m did not even reach the ends of
+        // the deck: a vehicle at the bridge's 50mph limit was inside for
+        // about 22 seconds, well under the point where Android can be
+        // relied on to sample location at all while it is in there. 1,150m
+        // gives ~103s.
+        //
+        // This supersedes the "keep both lower-speed crossings at 250m"
+        // reasoning noted in the 2026-09-06 handover: that decision was
+        // about not treating Humber and Warburton as special cases relative
+        // to each other, which is a fair instinct, but 250m was never
+        // derived from either structure. Both are now sized from their own
+        // published dimensions, which happen to differ because the
+        // structures do (2,220m vs a ~970m toll road).
+        radiusMeters: 1150,
       },
       price: {
         amount: 2.0,
@@ -505,14 +598,27 @@ export const MOCK_CROSSINGS_CONFIG: CrossingsConfig = {
       type: 'point',
       geofence: {
         kind: 'circle',
-        // Warburton/Rixton, Cheshire — approximate, verify precisely.
-        latitude: 53.4,
-        longitude: -2.4939,
-        // Lower-speed / constrained crossing — kept at 250m like the other
-        // lower-speed-category crossing (Humber Bridge, above) rather than
-        // treated as a special case; see the file-level comment's
-        // "Lower-speed / constrained crossings" category.
-        radiusMeters: 250,
+        // CORRECTED 2026-09-09. Was (53.4, -2.4939) — 2,467m off, the
+        // worst error in this file, and the latitude was the giveaway: a
+        // bare "53.4" is a placeholder, not a measurement.
+        //
+        // This one has the best provenance of the seven. The Rixton and
+        // Warburton Bridge Order 2024 (legislation.gov.uk) gives Ordnance
+        // Survey grid references for both ends of the tolled road —
+        // SJ6915390429 at the A57 in the north, SJ6980489711 at Warburton
+        // Bridge Road in the south. Converting those to WGS84 puts the
+        // bridge between (53.40976,-2.46550) and (53.40335,-2.45564), 968m
+        // apart. The 6-figure reference quoted for the bridge itself,
+        // SJ695901, converts to 53.40683,-2.46025 — 115m from the value
+        // used here, which is exactly the precision a 6-figure grid
+        // reference carries.
+        latitude: 53.4074,
+        longitude: -2.45881,
+        // Radius covers the whole 968m tolled stretch from its midpoint
+        // (half-length 484m) with margin: 550m gives ~82s inside at 30mph.
+        // Detection is easier here than anywhere else in this file anyway —
+        // there is a physical toll booth, so vehicles stop.
+        radiusMeters: 550,
       },
       price: {
         amount: 1.0,
