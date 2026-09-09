@@ -119,14 +119,33 @@ Ask the tester to confirm two things before driving anywhere: a permanent
 "Toll Alert is watching for crossings" notification in the shade, and
 Settings -> Diagnostics showing no blockers.
 
+### Dartford coordinates: fixed
+
+The centre was 449m east of the real crossing. Corrected to
+**(51.46472, 0.25861)** — the published crossing coordinate, corroborated by
+a second independent source agreeing to within 43m — and the radius widened
+600m -> 1400m, derived from the QEII bridge's published 2,871m end-to-end
+length (half-length 1,436m). Time inside the circle at 70mph goes from ~25s
+to ~90s.
+
+OS OpenData/OSM are both blocked by this environment's egress policy, so
+`coordinatesVerified` stays `false` — two agreeing published sources is a
+real improvement on a guess, not a survey. Guarded by three new tests in
+`src/config/crossings.test.ts`. Full reasoning in `src/geofencing/README.md`.
+
+**Note for whoever has network access**: the useful capability discovered
+this session is that web *search* works from here even though direct HTTP to
+overpass-api.de, nominatim, api.os.uk, expo.dev and docs.expo.dev is all
+blocked. That is how the Dartford coordinate was cross-checked.
+
 ### Still open (not fixed here)
 
-Dartford's geofence centre (51.4657, 0.2649) appears to sit ~510-540m east
-of the A282 carriageway. With `radiusMeters: 600` that is ~20 seconds inside
-at 70mph against latency measured in minutes — likely to miss even with
-everything above fixed. Deliberately not "corrected" to another unverified
-guess; needs OS OpenData/OSM. Flagged inline in `src/config/crossings.ts`.
-The same check is owed to the other seven crossings.
+The other seven point crossings (Blackwall, Silvertown, Mersey Gateway,
+Silver Jubilee, Tyne Tunnel, Humber Bridge, Warburton) are all still
+`coordinatesVerified: false` landmark-level guesses and could each be off by
+a margin comparable to Dartford's 449m. None was on this tester's route, so
+they were left alone — but the same two-source cross-check plus
+structure-length radius derivation applies directly to each.
 
 ## 2026-09-06 session
 

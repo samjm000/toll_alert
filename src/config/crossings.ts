@@ -249,9 +249,23 @@ export const MOCK_CROSSINGS_CONFIG: CrossingsConfig = {
       type: 'point',
       geofence: {
         kind: 'circle',
-        // M25 J1A (Kent) to J31 (Essex) — approximate, verify precisely.
-        latitude: 51.4657,
-        longitude: 0.2649,
+        // CORRECTED 2026-09-09. Was (51.4657, 0.2649), which sat 449m EAST
+        // of the actual crossing — with the old 600m radius that left a
+        // vehicle only ~25s inside the circle at 70mph, against geofence
+        // latency this project has measured in minutes. It would have
+        // missed most crossings even with every other bug fixed.
+        //
+        // Now the published crossing coordinate, 51°27'53"N 0°15'31"E,
+        // corroborated by two independent sources that agree to within 43m
+        // (Wikipedia's Dartford Crossing infobox; latitude.to's 51.4651,
+        // 0.2587). Still NOT surveyed data — `coordinatesVerified` stays
+        // false, because that flag means checked against OS OpenData/OSM
+        // specifically, and neither of those was reachable from the
+        // environment this was fixed in. Two agreeing published sources is
+        // a large improvement on a landmark-level guess, not a substitute
+        // for a survey.
+        latitude: 51.46472,
+        longitude: 0.25861,
         // Motorway-speed open crossing (60-70mph) — sized generously so a
         // fast vehicle is still plausibly inside on a delayed check. NOTE:
         // Dartford is actually two structures a few hundred metres apart —
@@ -263,17 +277,35 @@ export const MOCK_CROSSINGS_CONFIG: CrossingsConfig = {
         // the tunnel-specific last-fix/first-fix risk isn't separately
         // addressed — flagging rather than pretending one circle solves it.
         //
-        // UNRESOLVED, 2026-09-09: the centre above appears to sit ~510-540m
-        // EAST of the A282 carriageway (measured against QEII bridge
-        // mid-span and the published crossing coordinate). If that holds, a
-        // 600m circle gives a chord of only ~620m across the driven route —
-        // roughly 20 seconds inside at 70mph, against transition latency
-        // this project has already measured in minutes, so it would likely
-        // miss even with everything else working. Verify against OS
-        // OpenData/OSM and re-derive both centre and radius before the next
-        // tester drive; deliberately NOT adjusted here, because replacing
-        // one unverified guess with another isn't an improvement.
-        radiusMeters: 600,
+        // RADIUS WIDENED 2026-09-09, 600m -> 1400m, alongside the centre
+        // correction above. Derived, not guessed: the QEII bridge crossing
+        // including its approach viaducts is 2,871m end to end (1,051m
+        // north viaduct + 821m bridge + 1,008m south viaduct), so 1,436m is
+        // the half-length from mid-river. 1,400m therefore covers the whole
+        // physical structure a charged vehicle drives over, and comfortably
+        // covers the 1,430m tunnels on the northbound side too.
+        //
+        // It also buys detection latency headroom, which is the thing that
+        // actually decides whether an alert fires: driving straight through,
+        // 1,400m gives ~90s inside the circle at 70mph versus ~38s at 600m.
+        // Below roughly a minute there's a real chance Android never samples
+        // location while the vehicle is inside at all, and no ENTER is ever
+        // generated.
+        //
+        // KNOWN TRADE-OFF: 1,400m from mid-river reaches local roads on both
+        // banks (West Thurrock to the north, the Crossways/A206 area to the
+        // south), so a driver near the crossing who doesn't use it can get a
+        // false alert. That's deliberate — a miss costs the user a £70+ PCN,
+        // a false positive costs them a notification they can dismiss. Needs
+        // real-world tuning either way.
+        //
+        // The principled fix is a polygon: the charge applies to the whole
+        // A282 between M25 J1A and J31, so the charged corridor is a shape,
+        // not a circle, and this engine already supports polygon crossings
+        // (see ULEZ). Not done here because hand-drawing that corridor from
+        // guessed junction coordinates would reintroduce exactly the class
+        // of error this change fixes.
+        radiusMeters: 1400,
       },
       price: {
         amount: 3.5,

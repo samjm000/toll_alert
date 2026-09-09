@@ -55,7 +55,12 @@ test('isPointInAnyPolygon — false when the point matches no polygon', () => {
  * manual spot-check — would have caught immediately.
  */
 test('ULEZ boundary — Dartford Crossing is outside', () => {
-  const dartford = { latitude: 51.4657, longitude: 0.2649 };
+  // Updated 2026-09-09 alongside the corrected Dartford geofence centre in
+  // src/config/crossings.ts (the old 51.4657, 0.2649 was 449m off the real
+  // crossing). crossings.test.ts asserts the same thing against whatever the
+  // config actually ships; this keeps the boundary's own regression case
+  // pinned to a literal, so a bad edit to the config can't quietly weaken it.
+  const dartford = { latitude: 51.46472, longitude: 0.25861 };
   assert.equal(isPointInAnyPolygon(dartford, ULEZ_POLYGONS), false);
 });
 

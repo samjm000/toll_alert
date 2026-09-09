@@ -99,19 +99,60 @@ its notification promise resolves can have its JS context torn down first.
 Fixed: `CrossingDetectedHandler` now returns a promise and the engine awaits
 the whole chain.
 
-### Still open: Dartford's geofence barely touches the road
+### Fixed: Dartford's geofence was 449m off the road
 
-Separate from the above, and unfixed because it needs surveyed data this
-session could not reach. The configured centre (51.4657, 0.2649) is roughly
-**510-540 m** from the A282 carriageway on the landmark references available
-(QEII bridge mid-span ~512 m; the Wikipedia crossing coordinate ~539 m). With
-`radiusMeters: 600` that leaves a chord across the circle of only ~620 m —
-about **20 seconds inside at 70 mph**, against geofence transition latency
-this project has already measured "into minutes". Even with every defect
-above fixed, that is likely to miss. Verify the coordinate against OS
-OpenData/OSM and re-derive the radius from the true offset before the next
-tester drive; the same check is owed to the other seven crossings, all of
-which are still `coordinatesVerified: false`.
+The centre shipped as (51.4657, 0.2649) — **449m east of the actual
+crossing**. With the then-600m radius, a vehicle driving the A282 was inside
+the circle for only about 25 seconds at 70mph, against transition latency
+this project has measured in minutes. It would have missed most crossings
+even with all five defects above fixed.
+
+Corrected to **(51.46472, 0.25861)** — the published Dartford Crossing
+coordinate (51°27'53"N 0°15'31"E), corroborated by a second independent
+source (51.4651, 0.2587) that agrees to within **43m**.
+
+`coordinatesVerified` deliberately stays `false`. That flag means checked
+against OS OpenData/OSM specifically, and neither was reachable from the
+environment this was fixed in (both are blocked by network egress policy,
+as are expo.dev and docs.expo.dev). Two agreeing published sources beat a
+landmark-level guess by a wide margin; they are not a survey.
+
+The radius was widened **600m -> 1400m** at the same time, derived rather
+than guessed: the QEII bridge crossing including its approach viaducts is
+2,871m end to end (1,051m north viaduct + 821m bridge + 1,008m south
+viaduct), so 1,436m is the half-length from mid-river. 1,400m covers the
+whole structure a charged vehicle drives over, and the 1,430m tunnels on the
+northbound side. It also raises time-inside-the-circle from ~38s to ~90s at
+70mph — the number that actually decides whether Android ever samples
+location while the vehicle is in there.
+
+**Known trade-off**: 1,400m from mid-river reaches local roads on both banks
+(West Thurrock north, Crossways/A206 south), so someone near the crossing who
+doesn't use it can get a false alert. Deliberate: a miss costs the user a
+£70+ PCN, a false positive costs a dismissible notification. Needs real-world
+tuning.
+
+**The principled fix is a polygon.** The charge applies to the whole A282
+between M25 J1A and J31, so the charged area is a corridor, not a circle, and
+this engine already supports polygon crossings (see ULEZ). Not done here
+because hand-drawing that corridor from guessed junction coordinates would
+reintroduce exactly the class of error this change fixes — it needs real
+corridor geometry.
+
+Three regression tests now guard this (`src/config/crossings.test.ts`): the
+centre must be within 150m of the published coordinate, the radius must cover
+the structure and give over 60s inside at 70mph, and Dartford must not fall
+inside the ULEZ polygon (the pass-1 double-notification bug).
+
+### Still open: the other seven crossings
+
+All seven remaining point crossings are still `coordinatesVerified: false`
+landmark-level guesses, and none has been checked the way Dartford now has.
+Blackwall, Silvertown, Mersey Gateway, Silver Jubilee, Tyne Tunnel, Humber
+Bridge and Warburton could each be off by a comparable margin. The method
+that worked for Dartford — cross-checking two independent published
+coordinate sources and deriving the radius from the published structure
+length — applies directly to all of them.
 
 ### Diagnosing this in future
 
