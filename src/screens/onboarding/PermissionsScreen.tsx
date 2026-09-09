@@ -26,9 +26,69 @@ type Props = NativeStackScreenProps<OnboardingStackParamList, 'Permissions'>;
  * Still opt-in: the prompt only happens off a deliberate button press, and
  * "Not now" leaves everything off with the Settings toggle unchanged.
  */
+/** One numbered instruction, badge plus text, in the "What happens next" card. */
+function Step({ number, children, isLast }: { number: number; children: React.ReactNode; isLast: boolean }) {
+  return (
+    <View style={[styles.step, isLast && styles.stepLast]}>
+      <View style={styles.stepBadge}>
+        <Text style={styles.stepBadgeText}>{number}</Text>
+      </View>
+      <Text style={styles.stepText}>{children}</Text>
+    </View>
+  );
+}
+
+/**
+ * The prompts the user is about to see, one per step, in the order the OS
+ * shows them. Written as discrete numbered actions rather than a paragraph
+ * because a non-technical tester has to follow them while system dialogs are
+ * covering the screen — and because step 2 on Android is the one people miss.
+ *
+ * A function rather than a module-level const: these read `styles`, which is
+ * initialised at the bottom of the file, so evaluating them at module load
+ * would hit the temporal dead zone.
+ *
+ * Android 11+ does NOT show a dialog for background location:
+ * expo-location's `requestBackgroundPermissionsAsync` opens the system
+ * settings page instead. Describing that as a prompt sends the user looking
+ * for a popup that never appears.
+ */
+function getSteps(): React.ReactNode[] {
+  return Platform.OS === 'ios'
+    ? [
+        <>
+          Tap <Text style={styles.bold}>"Allow While Using App"</Text> on the location prompt.
+        </>,
+        <>
+          iOS will ask a second time — choose{' '}
+          <Text style={styles.bold}>"Change to Always Allow"</Text>.
+        </>,
+        <>
+          Tap <Text style={styles.bold}>Allow</Text> on the notifications prompt. That's how the
+          alert actually reaches you.
+        </>,
+      ]
+    : [
+        <>
+          Tap <Text style={styles.bold}>"While using the app"</Text> on the location popup.
+        </>,
+        <>
+          Android then opens your <Text style={styles.bold}>Settings page</Text>, not another
+          popup. Go to <Text style={styles.bold}>Permissions → Location</Text>, choose{' '}
+          <Text style={styles.bold}>"Allow all the time"</Text>, then come back here — Toll Alert
+          will switch itself on.
+        </>,
+        <>
+          Tap <Text style={styles.bold}>Allow</Text> on the notifications prompt. That's how the
+          alert actually reaches you.
+        </>,
+      ];
+}
+
 export function PermissionsScreen(_props: Props) {
   const { completeOnboarding, setBackgroundMonitoringEnabled } = useAppState();
   const [working, setWorking] = useState(false);
+  const steps = getSteps();
 
   const enableThenContinue = async () => {
     setWorking(true);
@@ -68,35 +128,22 @@ export function PermissionsScreen(_props: Props) {
         </Text>
         <Card>
           <Text style={styles.cardTitle}>What happens next</Text>
-          {Platform.OS === 'ios' ? (
-            <Text style={styles.cardBody}>
-              iOS will ask twice. First choose <Text style={styles.bold}>"Allow While Using App"</Text>,
-              then <Text style={styles.bold}>"Change to Always Allow"</Text> when it asks again. You'll
-              also be asked to <Text style={styles.bold}>allow notifications</Text> — that's how the
-              alert actually reaches you.
-            </Text>
-          ) : (
-            // Android 11+ does NOT show a dialog for background location:
-            // expo-location's requestBackgroundPermissionsAsync opens the
-            // system settings page instead. Describing it as a prompt sends
-            // the user looking for a popup that never appears.
-            <Text style={styles.cardBody}>
-              First a popup asking for location — choose{' '}
-              <Text style={styles.bold}>"While using the app"</Text>. Then Android opens your phone's{' '}
-              <Text style={styles.bold}>Settings page</Text> rather than another popup: go to{' '}
-              <Text style={styles.bold}>Permissions → Location</Text>, choose{' '}
-              <Text style={styles.bold}>"Allow all the time"</Text>, then come back here and Toll Alert
-              will switch itself on. You'll also be asked to{' '}
-              <Text style={styles.bold}>allow notifications</Text> — that's how the alert reaches you.
-            </Text>
-          )}
+          {steps.map((step, index) => (
+            <Step key={index} number={index + 1} isLast={index === steps.length - 1}>
+              {step}
+            </Step>
+          ))}
+          <Text style={styles.cardFootnote}>
+            Toll Alert only uses this to detect the crossings in your list. It doesn't track or
+            store your route.
+          </Text>
         </Card>
+      </View>
+      <View style={styles.actions}>
         <Text style={styles.note}>
           Without background location and notifications, a crossing detected while the app is closed
           can't reach you. You can change either later in Settings.
         </Text>
-      </View>
-      <View style={styles.actions}>
         <PrimaryButton
           label={working ? 'Setting up…' : 'Turn on crossing alerts'}
           onPress={enableThenContinue}
@@ -121,6 +168,46 @@ const styles = StyleSheet.create({
   actions: {
     gap: spacing.sm,
   },
+  step: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  stepLast: {
+    marginBottom: spacing.sm,
+  },
+  stepBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.primarySoftBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    // Nudges the badge onto the text's first-line baseline rather than the
+    // top of its line box, which otherwise reads as slightly too high.
+    marginTop: 1,
+  },
+  stepBadgeText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  stepText: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.textMuted,
+    lineHeight: 20,
+  },
+  cardFootnote: {
+    fontSize: 12,
+    color: colors.textMuted,
+    lineHeight: 17,
+    fontStyle: 'italic',
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
   title: {
     fontSize: 26,
     fontWeight: '800',
@@ -135,7 +222,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.md,
   },
   cardBody: {
     fontSize: 14,
