@@ -207,8 +207,31 @@ before injecting the mock fix — that is the case every previous pass missed.
 ### Handing the next APK to a tester
 
 Use the **`preview`** profile — `npm run build:android:preview` (added this
-session alongside a `//` note in `eas.json`). It produces a standalone
-release APK with a download link. **Never hand a tester a `development`
+session). It produces a standalone release APK with a download link.
+
+**Do not put comment keys in `eas.json`.** A `"//": "..."` explanatory key
+was added to the `preview` profile alongside that script and broke every
+build with `eas.json is not valid. - "build.preview.//" is not allowed`.
+EAS validates the file against a strict schema that rejects unknown keys;
+the JSON-comment-by-convention trick does not work here. Removed
+2026-09-09. Explain profiles in this file or the READMEs instead.
+
+**Validating `eas.json` without a build or a login**: install
+`@expo/eas-json` (the module eas-cli itself validates with) and call it
+directly — this reproduces the exact error above and takes seconds, which
+beats finding out from a failed build on someone else's machine:
+
+```js
+const { EasJsonAccessor, EasJsonUtils } = require('@expo/eas-json');
+const accessor = EasJsonAccessor.fromProjectPath('/path/to/toll_alert');
+await EasJsonUtils.getBuildProfileAsync(accessor, 'android', 'preview');
+```
+
+All three profiles were confirmed valid this way after the fix: `development`
+resolves with `developmentClient: true`, `preview` with
+`{distribution: internal, buildType: apk, autoIncrement: true}` and no
+`developmentClient` (so it is a standalone release APK), `production` with
+`distribution: store`. **Never hand a tester a `development`
 build**: it sets `developmentClient: true` and boots to the expo-dev-client
 launcher asking for a Metro server URL, which is useless on a phone and is
 a live suspect for this whole incident.
