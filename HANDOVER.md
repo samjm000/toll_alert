@@ -37,14 +37,20 @@ Its first run is also a test of the script itself.
 Still manual: the onboarding permission flow and Android 11+ Settings
 redirect, the Diagnostics screen, and the battery-optimisation dialog.
 
-### Windows gotcha
+### Two environment gotchas, both cost a round trip
 
-`&&` is not a valid statement separator in **Windows PowerShell 5.1** (it
-works in PowerShell 7+). Chained commands from docs or chat — e.g.
-`npx eas-cli login && npx eas-cli whoami` — fail with
-`The token '&&' is not a valid statement separator in this version.`
-Run them on separate lines. Nothing to do with this project; it has already
-cost one round trip.
+**1. `'eas' is not recognized as an internal or external command.`**
+`package.json`'s build scripts called bare `eas`, which only resolves if
+`eas-cli` is installed globally. It never was on this machine. Fixed
+2026-09-09: both scripts now call `npx eas-cli`, which needs no global
+install. A global `npm i -g eas-cli` still works and is faster if you build
+often — the scripts work either way.
+
+**2. `The token '&&' is not a valid statement separator in this version.`**
+`&&` is not a valid separator in **Windows PowerShell 5.1** (it works in
+PowerShell 7+, and in `cmd.exe`). Chained commands copied from docs or chat —
+e.g. `npx eas-cli login && npx eas-cli whoami` — fail there. Run them on
+separate lines. Nothing to do with this project.
 
 ## 2026-09-09 session: emulator test plan revised
 
@@ -159,7 +165,8 @@ symptom on its own before any of the above. This session could not confirm
 which profile it was (no EAS login, and expo.dev is blocked from this
 environment's network egress). Confirm with `eas build:list --platform
 android` before the next test drive, and hand testers a `preview` or
-`production` APK, never a `development` one.
+`production` APK, never a `development` one. (Use `npx eas-cli build:list
+--platform android` — see the PATH gotcha below.)
 
 ### Fixes shipped this session
 

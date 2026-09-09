@@ -830,7 +830,7 @@ Two options — pick whichever is more convenient:
 
 - **Cloud build (no local SDK build step needed)**:
   `eas login` once, then `npm run build:android:dev` (already scripted —
-  runs `eas build --platform android --profile development`, which
+  runs `npx eas-cli build --platform android --profile development`, which
   produces an installable `.apk` since `eas.json`'s `development` profile
   sets `buildType: apk`). Download the APK when it finishes and drag it
   onto the running emulator window to install, or
@@ -1151,14 +1151,56 @@ based:
   Hull — pick whichever cluster is closest to you rather than trying to
   cover all eight in person.
 
-## Wired into the app — via a Settings toggle, not auto-start
+## Wired into the app — armed during onboarding
 
-`AppState.setBackgroundMonitoringEnabled(true)` calls `geofencing.requestPermissions()`
-then `geofencing.start()`; the Settings screen's "Background monitoring" row
-drives this. Deliberately an explicit opt-in toggle rather than
-auto-starting once onboarding permissions are granted, since real
-background location tracking has a battery/privacy cost a tester should
-choose to take on, not something sprung on them silently — revisit this
-default once there's a real product decision on the onboarding flow. The
-toggle is disabled on web (`Platform.OS === 'web'`), since geofencing needs
-the custom dev client on a real device to do anything at all.
+**Changed 2026-09-09. The paragraph that used to sit here described the
+opposite policy and was left stale for part of that day; if you are reading a
+cached copy saying monitoring is "a Settings toggle, not auto-start", that is
+out of date.**
+
+`AppState.setBackgroundMonitoringEnabled(true)` calls
+`geofencing.requestPermissions()` then `geofencing.start()`. **Two** things
+drive it now:
+
+1. **The last onboarding screen** ("One last thing" → *"Turn on crossing
+   alerts"*). This is the primary path.
+2. The Settings screen's "Background monitoring" row, unchanged, for anyone
+   who skipped it or wants to turn it off again.
+
+### Why this changed
+
+The previous policy was that monitoring should be an explicit Settings
+opt-in rather than something armed during onboarding — the reasoning being
+that background location has a real battery and privacy cost a tester should
+choose to take on rather than have sprung on them.
+
+That reasoning is sound in the abstract and was wrong in practice. The first
+real tester completed onboarding, saw a Home screen that claimed to be
+watching crossings, drove over the Dartford Crossing, and got nothing —
+because nothing was ever armed. A non-technical tester has no reason to go
+hunting through Settings for a toggle, and the onboarding screen's own copy
+promised a permission prompt it then didn't show. An app that silently does
+nothing is not a privacy win.
+
+The consent concern is answered by *how* it is armed, not by hiding it:
+
+- It only happens on a deliberate button press, never automatically.
+- The screen explains what will be requested and why, before requesting it.
+- **"Not now"** is right there, and leaves everything off.
+- Refusing is not a dead end — onboarding completes either way, and the
+  Settings toggle still works later.
+
+So it is still opt-in. It is just opt-in somewhere the user will actually
+see it.
+
+### Platform notes
+
+The Settings toggle is disabled on web (`Platform.OS === 'web'`), since
+geofencing needs a real native build on a real device to do anything at all.
+
+On Android 11+ arming this is a two-part affair: `requestBackgroundPermissionsAsync()`
+opens the system settings page rather than showing a dialog, and resolves
+immediately while the user is still there. `AppState` records the user's
+*intent* before requesting and re-checks on foreground resume, which is what
+actually switches monitoring on when they come back. See
+`src/state/persistence.ts` and the resume effect in `AppState.tsx`.
