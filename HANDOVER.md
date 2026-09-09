@@ -11,6 +11,49 @@ the ULEZ zone) and reminds the user to pay before the deadline. See
 `README.md` for the full feature/architecture rundown and
 `src/geofencing/README.md` for the geofencing engine specifically.
 
+## 2026-09-09 session: silent notification channel
+
+Surfaced as a console error on the emulator:
+
+    expo-notifications: Custom sound 'default' not found in native app.
+
+Not console noise — the channel had **no sound at all**, on an app whose
+entire job is a time-limited payment alert.
+
+`setNotificationChannelAsync`'s `sound` field takes a custom sound
+*filename*, not a mode. The read type is `'default' | 'custom' | null`, which
+is what misled the original code; the *input* type is `string | null`.
+`AndroidXNotificationsChannelManager.createSoundUriFromArguments` is explicit:
+
+- key absent -> `Settings.System.DEFAULT_NOTIFICATION_URI` (what we want)
+- `null` -> no sound at all
+- any string -> resolved as a bundled filename
+
+So `sound: 'default'` went hunting for a `default.wav` that does not exist.
+Fixed by omitting the key.
+
+### The channel-id bump matters more than the fix
+
+**Android notification channels are immutable once created.** After the first
+`setNotificationChannelAsync`, the OS ignores later changes to sound,
+importance and vibration for that id — those settings belong to the user from
+then on. The silent channel would therefore have stayed silent forever on any
+device that already had it, however correct this file became.
+
+So the id moved to `crossing-alerts-v2`, and `RETIRED_ANDROID_CHANNEL_IDS`
+deletes the old one on startup so it does not linger in system settings. **Any
+future change to sound, importance or vibration needs the same treatment:**
+bump the id, add the old one to that array. Otherwise the change silently does
+nothing on existing installs and everything looks fine in code review.
+
+### If a bell is wanted later
+
+A custom sound needs a real audio file committed to the repo and listed in
+app.json's `expo-notifications` plugin `sounds` array, then named here. The
+plugin copies it into `android/app/src/main/res/raw` at prebuild, so it needs
+a native rebuild — not just a JS reload. The system default is what most users
+expect from an alert app, so this was not done speculatively.
+
 ## 2026-09-09 session: automated emulator test
 
 `npm run test:emulator` (`scripts/emulator-test.mjs`). Node, no new

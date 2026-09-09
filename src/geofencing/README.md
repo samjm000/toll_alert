@@ -728,7 +728,13 @@ are wrong.
 
 `npm run test:emulator` (`scripts/emulator-test.mjs`) does most of what the
 manual steps below do, without the clicking. It needs a connected device or
-emulator with a **preview** build installed, and nothing else:
+emulator with a **preview** build installed, and nothing else — in
+particular it does **not** need `adb` on PATH. It tries PATH first, then the
+standard SDK locations (`ANDROID_HOME`, `ANDROID_SDK_ROOT`,
+`%LOCALAPPDATA%\Android\Sdk`, `~/Library/Android/sdk`, `~/Android/Sdk`), and
+prints which one it used. Starting the emulator from Android Studio or the
+VS Code extension leaves you with a working SDK and no PATH entry, which is
+the common case:
 
 ```
 npm run test:emulator                              # all 10 cases

@@ -22,7 +22,8 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -33,20 +34,63 @@ const PACKAGE = 'com.tollalert.app';
  * adb plumbing
  * ------------------------------------------------------------------ */
 
+let resolvedAdb = null;
+
+/**
+ * Finds adb without requiring it on PATH.
+ *
+ * Anyone whose emulator starts from Android Studio or the VS Code extension
+ * has a working SDK but often no PATH entry, because neither tool needs one —
+ * so demanding PATH setup was friction for no reason. PATH is still tried
+ * first, so an explicitly configured adb always wins.
+ */
+function resolveAdb() {
+  if (resolvedAdb) return resolvedAdb;
+
+  const exe = process.platform === 'win32' ? 'adb.exe' : 'adb';
+
+  try {
+    execFileSync('adb', ['version'], { stdio: 'ignore' });
+    resolvedAdb = 'adb';
+    return resolvedAdb;
+  } catch {
+    // Not on PATH — fall through to the standard SDK locations.
+  }
+
+  const roots = [
+    process.env.ANDROID_HOME,
+    process.env.ANDROID_SDK_ROOT,
+    process.env.LOCALAPPDATA && join(process.env.LOCALAPPDATA, 'Android', 'Sdk'),
+    join(homedir(), 'AppData', 'Local', 'Android', 'Sdk'),
+    join(homedir(), 'Library', 'Android', 'sdk'),
+    join(homedir(), 'Android', 'Sdk'),
+  ].filter(Boolean);
+
+  for (const root of roots) {
+    const candidate = join(root, 'platform-tools', exe);
+    if (existsSync(candidate)) {
+      resolvedAdb = candidate;
+      return resolvedAdb;
+    }
+  }
+
+  fail(
+    'adb not found — not on PATH, and not in any standard Android SDK location.\n' +
+      '  Looked in:\n' +
+      roots.map((r) => `    ${join(r, 'platform-tools', exe)}`).join('\n') +
+      '\n\n  If your SDK is elsewhere, point ANDROID_HOME at it:\n' +
+      '    PowerShell:  $env:ANDROID_HOME = "D:\\path\\to\\Sdk"\n' +
+      '    bash:        export ANDROID_HOME=/path/to/Sdk\n' +
+      '  Android Studio shows the path under Settings > Languages & Frameworks >\n' +
+      '  Android SDK ("Android SDK Location").'
+  );
+}
+
 /** Runs adb with an argument array — no shell, so Windows quoting can't bite. */
 function adb(args, { allowFail = false } = {}) {
   try {
-    return execFileSync('adb', args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).trim();
+    return execFileSync(resolveAdb(), args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).trim();
   } catch (e) {
-    if (e.code === 'ENOENT') {
-      fail(
-        'adb not found on PATH.\n' +
-          '  Add the Android SDK platform-tools to PATH. On Windows PowerShell:\n' +
-          '    $env:Path += ";$env:LOCALAPPDATA\\Android\\Sdk\\platform-tools"\n' +
-          '  On macOS/Linux:\n' +
-          '    export PATH="$PATH:$HOME/Library/Android/sdk/platform-tools"'
-      );
-    }
     if (allowFail) return '';
     throw e;
   }
@@ -188,6 +232,7 @@ function preflight() {
     );
   }
 
+  console.log(`adb:     ${resolvedAdb === 'adb' ? 'adb (from PATH)' : resolvedAdb}`);
   console.log(`Device:  ${online[0].split('\t')[0]}`);
   console.log(`Package: ${PACKAGE}`);
 }
