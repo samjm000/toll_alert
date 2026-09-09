@@ -19,6 +19,7 @@ import { logEvent } from '../diagnostics/log';
  */
 
 const MONITORING_KEY = 'tollalert.backgroundMonitoring.v1';
+const MONITORING_INTENT_KEY = 'tollalert.backgroundMonitoringIntent.v1';
 const EVENTS_KEY = 'tollalert.crossingEvents.v1';
 const INSIDE_KEY = 'tollalert.insideRegion.v1';
 
@@ -49,6 +50,34 @@ export async function saveMonitoringEnabled(enabled: boolean): Promise<void> {
     await AsyncStorage.setItem(MONITORING_KEY, enabled ? 'true' : 'false');
   } catch {
     logEvent('warn', 'persistence', 'Could not persist the monitoring toggle');
+  }
+}
+
+/**
+ * Whether the user has ASKED for monitoring, as distinct from whether it is
+ * running. The two come apart on Android 11+, where
+ * `requestBackgroundPermissionsAsync()` does not show a dialog at all — it
+ * opens the system settings page and resolves straight away, while the user
+ * is still on that page. The permission check therefore fails at the moment
+ * of asking even when the user goes on to grant it seconds later.
+ *
+ * Recording the intent is what lets the app pick monitoring up when the user
+ * returns from settings, instead of leaving them with a "permission denied"
+ * message they just disproved.
+ */
+export async function loadMonitoringIntent(): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(MONITORING_INTENT_KEY)) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export async function saveMonitoringIntent(intended: boolean): Promise<void> {
+  try {
+    await AsyncStorage.setItem(MONITORING_INTENT_KEY, intended ? 'true' : 'false');
+  } catch {
+    logEvent('warn', 'persistence', 'Could not persist the monitoring intent');
   }
 }
 

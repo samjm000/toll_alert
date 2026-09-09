@@ -1,4 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+// Aliased: this module exports its own `AppState` type for the app's context.
+import { AppState as RNAppState, AppStateStatus } from 'react-native';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { MOCK_CROSSINGS_CONFIG, MOCK_SUBSCRIPTION_CONFIG } from '../config/crossings';
 import { geofencing } from '../geofencing';
@@ -8,8 +10,10 @@ import { logEvent } from '../diagnostics/log';
 import {
   loadCrossingEvents,
   loadMonitoringEnabled,
+  loadMonitoringIntent,
   markCrossingEventPaid,
   saveMonitoringEnabled,
+  saveMonitoringIntent,
 } from './persistence';
 import {
   addPaidActionListener,
@@ -124,20 +128,40 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  /**
+   * Guards against two concurrent `start()` calls — the launch re-arm and the
+   * foreground-resume check can otherwise race on a cold start that resumes
+   * from the settings page.
+   */
+  const startingRef = useRef(false);
+
   const startEngine = useCallback(async () => {
-    await geofencing.start(MOCK_CROSSINGS_CONFIG.crossings, (detection) =>
-      recordCrossingRef.current(detection.crossing, 'geofence')
-    );
+    if (startingRef.current) return;
+    startingRef.current = true;
+    try {
+      await geofencing.start(MOCK_CROSSINGS_CONFIG.crossings, (detection) =>
+        recordCrossingRef.current(detection.crossing, 'geofence')
+      );
+    } finally {
+      startingRef.current = false;
+    }
   }, []);
 
   const setBackgroundMonitoringEnabled = useCallback(
     async (enabled: boolean): Promise<boolean> => {
       if (!enabled) {
         await geofencing.stop().catch((e) => logEvent('error', 'app', 'geofencing.stop() threw', String(e)));
+        await saveMonitoringIntent(false);
         await saveMonitoringEnabled(false);
         setBackgroundMonitoringEnabledState(false);
         return true;
       }
+
+      // Recorded BEFORE the permission request, because on Android 11+ that
+      // request navigates away to the system settings page and resolves
+      // immediately — the user is still deciding when this function returns.
+      // The resume effect below is what finishes the job.
+      await saveMonitoringIntent(true);
 
       const granted = await geofencing.requestPermissions();
       if (!granted) {
@@ -231,6 +255,47 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       cancelled = true;
     };
   }, [startEngine]);
+
+  /**
+   * Picks monitoring up when the user comes back from the Android system
+   * settings page.
+   *
+   * On Android 11+ `requestBackgroundPermissionsAsync()` shows no dialog: it
+   * opens Settings and resolves straight away, so the permission check inside
+   * `setBackgroundMonitoringEnabled` fails even for a user who grants "Allow
+   * all the time" ten seconds later. Without this, doing exactly the right
+   * thing left the app switched off, showing a message saying permission was
+   * refused. This re-checks on every foreground resume and starts monitoring
+   * the moment the permission actually appears.
+   */
+  useEffect(() => {
+    const onChange = (next: AppStateStatus) => {
+      if (next !== 'active') return;
+
+      (async () => {
+        if (backgroundMonitoringEnabled) return;
+        if (!(await loadMonitoringIntent())) return;
+
+        const status = await geofencing.getStatus().catch(() => null);
+        if (!status) return;
+        if (status.foregroundLocationStatus !== 'granted') return;
+        if (status.backgroundLocationStatus !== 'granted') return;
+
+        await logEvent(
+          'info',
+          'app',
+          'Background location was granted while the app was away (Android 11+ opens system settings rather than a dialog) — starting monitoring now'
+        );
+        await startEngine();
+        await ensureNotificationPermission();
+        await saveMonitoringEnabled(true);
+        setBackgroundMonitoringEnabledState(true);
+      })().catch((e) => logEvent('error', 'app', 'Resume permission re-check failed', String(e)));
+    };
+
+    const subscription = RNAppState.addEventListener('change', onChange);
+    return () => subscription.remove();
+  }, [backgroundMonitoringEnabled, startEngine]);
 
   const value = useMemo<AppState>(
     () => ({

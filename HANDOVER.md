@@ -11,6 +11,71 @@ the ULEZ zone) and reminds the user to pay before the deadline. See
 `README.md` for the full feature/architecture rundown and
 `src/geofencing/README.md` for the geofencing engine specifically.
 
+## 2026-09-09 session: emulator test plan revised
+
+`src/geofencing/README.md`'s "Manual testing (Android)" plan existed but was
+stale and, worse, **could not have caught the bug that broke the first real
+tester**. Every step backgrounded the app without force-stopping it, so
+`start()` had always run in that same JS context — the one case the shipped
+app almost never runs in. Both prior "confirmed by actually running this"
+passes are honest about what they did; they just never tested a cold start.
+
+Changes:
+- **New step 5b, the cold-start test**: force-stop the app, confirm with
+  `pidof` that it is genuinely dead, then inject the fix. Includes how to
+  confirm from logcat (`Cold-start hydrate …`) that the cold path actually
+  ran rather than a still-warm process, how to read the diagnostic log when
+  nothing fires, and a check that the detection survives into the next
+  launch. Flags that this must run on a `preview` build, not a dev client —
+  a headless dev-client relaunch needs Metro and fails for unrelated reasons.
+- **New step 4b**: verify Settings → Diagnostics, including deliberately
+  revoking ACCESS_BACKGROUND_LOCATION and confirming the screen reports it.
+  A diagnostics screen that only ever says "fine" is worse than none.
+- **Step 4 rewritten** around the onboarding path (now primary) and the
+  Android 11+ Settings redirect, including that a fresh install is required
+  because installing over the top keeps AsyncStorage and skips onboarding.
+- **All mock coordinates and radii corrected.** The plan still used
+  Dartford's old 51.4657, 0.2649 — which lands inside the new 1,400m radius,
+  so testing with it would have appeared to pass while proving nothing.
+  Added a table of all seven other crossings' `geo fix` values and radii.
+- A "three tests that actually matter" summary at the top.
+
+## 2026-09-09 session, later: the Android 11+ settings-redirect trap
+
+Found while drafting tester instructions, and it would have wasted the next
+drive on its own.
+
+`expo-location`'s own SDK 57 typings say it plainly: **"On Android 11 or
+higher: `requestBackgroundPermissionsAsync` will open the system settings
+page."** No dialog. It navigates away and the promise resolves immediately,
+while the user is still standing on that Settings screen deciding.
+
+So the onboarding flow added earlier this session had a hole: it called
+`requestPermissions()`, got `false` back (correctly — nothing was granted
+*yet*), saved monitoring as off and told the user permission was refused.
+A tester who then did exactly the right thing — Permissions → Location →
+"Allow all the time" — came back to an app that was still switched off and
+claiming they'd denied it. Every Samsung in service today is well past
+Android 11, so this was the guaranteed path, not an edge case.
+
+Fixed in three parts:
+- `persistence.ts` now stores a monitoring **intent** separately from
+  monitoring **enabled**. Intent is written *before* the permission request,
+  precisely because the request navigates away.
+- `AppState.tsx` listens for the app returning to the foreground. If intent
+  is set and both location permissions are now granted, it starts the engine
+  and switches monitoring on. A `startingRef` guard stops this racing the
+  launch-time re-arm.
+- The onboarding copy no longer promises a popup Android will not show. On
+  Android it now describes the Settings redirect step by step; the failure
+  alert is retitled "One step left" and asks the user to finish in Settings
+  rather than telling them they refused.
+
+`BackgroundLocationRationaleModal` already described this correctly for the
+Settings-toggle path — the onboarding path added earlier this session simply
+didn't reuse that knowledge. Worth reading that component before touching
+any permission copy.
+
 ## 2026-09-09 session: first real tester got no notification
 
 **Report**: a tester (Rob's son, Samsung Android) installed the APK from

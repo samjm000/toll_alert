@@ -37,10 +37,16 @@ export function PermissionsScreen(_props: Props) {
       if (!enabled) {
         // Not a dead end — finish onboarding either way and say plainly what
         // the consequence is, rather than trapping the user on this screen.
+        // NOT necessarily a refusal on Android 11+: the background-location
+        // request opens the system settings page and resolves immediately,
+        // so this runs while the user is still on that page. AppState's
+        // foreground-resume check picks the permission up when they come
+        // back, which is why this wording asks them to finish rather than
+        // telling them they denied it.
         Alert.alert(
-          'Alerts are off',
+          Platform.OS === 'android' ? 'One step left' : 'Alerts are off',
           Platform.OS === 'android'
-            ? 'Toll Alert needs "Allow all the time" location access to spot a crossing while the app is closed. You can grant it any time from Settings → Background monitoring, and check it worked under Settings → Diagnostics.'
+            ? 'If your phone opened its Settings page, choose Permissions → Location → "Allow all the time", then come back here — Toll Alert will switch itself on. Without it, a crossing can\'t be spotted while the app is closed. You can check it worked under Settings → Diagnostics.'
             : 'Toll Alert needs "Always" location access to spot a crossing while the app is closed. You can grant it any time from Settings → Background monitoring.',
           [{ text: 'OK', onPress: completeOnboarding }]
         );
@@ -61,15 +67,29 @@ export function PermissionsScreen(_props: Props) {
           location in the background — including when the app is closed.
         </Text>
         <Card>
-          <Text style={styles.cardTitle}>You'll see two or three system prompts next</Text>
-          <Text style={styles.cardBody}>
-            Please choose{' '}
-            <Text style={styles.bold}>"Allow While Using App"</Text>, then{' '}
-            <Text style={styles.bold}>{Platform.OS === 'ios' ? '"Change to Always Allow"' : '"Allow all the time"'}</Text>{' '}
-            when asked again, and finally <Text style={styles.bold}>allow notifications</Text> — that
-            last one is how the alert actually reaches you. Toll Alert only uses this to detect the
-            crossings in your config; it doesn't track or store your route.
-          </Text>
+          <Text style={styles.cardTitle}>What happens next</Text>
+          {Platform.OS === 'ios' ? (
+            <Text style={styles.cardBody}>
+              iOS will ask twice. First choose <Text style={styles.bold}>"Allow While Using App"</Text>,
+              then <Text style={styles.bold}>"Change to Always Allow"</Text> when it asks again. You'll
+              also be asked to <Text style={styles.bold}>allow notifications</Text> — that's how the
+              alert actually reaches you.
+            </Text>
+          ) : (
+            // Android 11+ does NOT show a dialog for background location:
+            // expo-location's requestBackgroundPermissionsAsync opens the
+            // system settings page instead. Describing it as a prompt sends
+            // the user looking for a popup that never appears.
+            <Text style={styles.cardBody}>
+              First a popup asking for location — choose{' '}
+              <Text style={styles.bold}>"While using the app"</Text>. Then Android opens your phone's{' '}
+              <Text style={styles.bold}>Settings page</Text> rather than another popup: go to{' '}
+              <Text style={styles.bold}>Permissions → Location</Text>, choose{' '}
+              <Text style={styles.bold}>"Allow all the time"</Text>, then come back here and Toll Alert
+              will switch itself on. You'll also be asked to{' '}
+              <Text style={styles.bold}>allow notifications</Text> — that's how the alert reaches you.
+            </Text>
+          )}
         </Card>
         <Text style={styles.note}>
           Without background location and notifications, a crossing detected while the app is closed
