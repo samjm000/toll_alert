@@ -34,7 +34,8 @@
     "web": "expo start --web",
     "build:android:dev": "eas build --platform android --profile development",
     "build:android:preview": "eas build --platform android --profile preview",
-    "test": "node --test src/**/*.test.ts"
+    "test": "node --test src/**/*.test.ts",
+    "test:emulator": "node scripts/emulator-test.mjs"
   },
   "private": true
 }

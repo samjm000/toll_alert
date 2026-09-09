@@ -11,6 +11,41 @@ the ULEZ zone) and reminds the user to pay before the deadline. See
 `README.md` for the full feature/architecture rundown and
 `src/geofencing/README.md` for the geofencing engine specifically.
 
+## 2026-09-09 session: automated emulator test
+
+`npm run test:emulator` (`scripts/emulator-test.mjs`). Node, no new
+dependencies, cross-platform. Drives adb directly via `execFileSync` with an
+argument array rather than a shell string, so Windows quoting cannot bite.
+
+Ten cases: the eight point crossings, ULEZ via Trafalgar Square, and a
+negative control at Edinburgh where nothing should fire. Per case it grants
+permissions, enables mock location, moves far away, force-stops the app and
+**confirms with `pidof` that the process is gone**, injects the coordinates,
+polls `dumpsys notification`, and greps logcat for `Cold-start hydrate` to
+prove the headless path actually ran. A notification without that log line
+FAILS the case — that combination means the process was still warm and
+nothing was tested.
+
+Coordinates are parsed out of `src/config/crossings.ts` (same whole-line
+regex approach as `crossings.test.ts`, for the same reason: the module can't
+be imported under Node's ESM loader). `--list` prints them, which is how you
+confirm the script isn't testing stale values.
+
+**Never run against a real device** — written with no Android SDK available.
+Its first run is also a test of the script itself.
+
+Still manual: the onboarding permission flow and Android 11+ Settings
+redirect, the Diagnostics screen, and the battery-optimisation dialog.
+
+### Windows gotcha
+
+`&&` is not a valid statement separator in **Windows PowerShell 5.1** (it
+works in PowerShell 7+). Chained commands from docs or chat — e.g.
+`npx eas-cli login && npx eas-cli whoami` — fail with
+`The token '&&' is not a valid statement separator in this version.`
+Run them on separate lines. Nothing to do with this project; it has already
+cost one round trip.
+
 ## 2026-09-09 session: emulator test plan revised
 
 `src/geofencing/README.md`'s "Manual testing (Android)" plan existed but was

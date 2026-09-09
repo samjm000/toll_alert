@@ -724,6 +724,48 @@ Also updated: every mock coordinate and radius quoted below changed on
 seven crossings" above). The old figures in earlier revisions of this file
 are wrong.
 
+### Run the automated script first
+
+`npm run test:emulator` (`scripts/emulator-test.mjs`) does most of what the
+manual steps below do, without the clicking. It needs a connected device or
+emulator with a **preview** build installed, and nothing else:
+
+```
+npm run test:emulator                              # all 10 cases
+npm run test:emulator -- --only dartford-crossing  # one case
+npm run test:emulator -- --list                    # what it will test, with coordinates
+npm run test:emulator -- --timeout 240             # slower device
+npm run test:emulator -- --no-cold                 # leave the app running
+```
+
+What it does, per case: grants the four permissions, enables mock location,
+moves the device far away, **force-stops the app and confirms with `pidof`
+that the process is actually gone**, injects the crossing's coordinates, then
+polls `dumpsys notification` until the expected alert appears — and greps
+logcat for `Cold-start hydrate` to prove the headless path ran rather than a
+still-warm process. It fails the case if the notification fires *without*
+that line, because that means nothing was tested.
+
+It reads its coordinates straight out of `src/config/crossings.ts`, so it
+cannot drift from what the app ships. `--list` prints them, which is the
+quickest way to confirm that.
+
+It also checks what should **not** fire: the wrong crossing of a close pair
+(Blackwall/Silvertown at 770m, Mersey Gateway/Silver Jubilee at 1,779m), a
+ULEZ alert anywhere it isn't genuinely owed, and a negative control at
+Edinburgh where nothing at all should fire. That last one matters — without
+it, a build that fired unconditionally would pass every other case.
+
+**Not automated**, so still do these by hand: the onboarding permission flow
+including the Android 11+ Settings redirect (step 4), the Diagnostics screen
+(step 4b), and the "Improve reliability" battery-optimisation dialog. Those
+need a human looking at the screen.
+
+**Status**: this script has never been run against a real device — it was
+written in an environment with no Android SDK. Treat its first run as also
+being a test of the script. If it reports something implausible, check it by
+hand against the steps below before believing it.
+
 ### The three tests that actually matter
 
 If you only have time for three, do these, in this order:
