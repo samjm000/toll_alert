@@ -11,6 +11,35 @@ the ULEZ zone) and reminds the user to pay before the deadline. See
 `README.md` for the full feature/architecture rundown and
 `src/geofencing/README.md` for the geofencing engine specifically.
 
+## 2026-09-09 session: emulator test plan revised
+
+`src/geofencing/README.md`'s "Manual testing (Android)" plan existed but was
+stale and, worse, **could not have caught the bug that broke the first real
+tester**. Every step backgrounded the app without force-stopping it, so
+`start()` had always run in that same JS context — the one case the shipped
+app almost never runs in. Both prior "confirmed by actually running this"
+passes are honest about what they did; they just never tested a cold start.
+
+Changes:
+- **New step 5b, the cold-start test**: force-stop the app, confirm with
+  `pidof` that it is genuinely dead, then inject the fix. Includes how to
+  confirm from logcat (`Cold-start hydrate …`) that the cold path actually
+  ran rather than a still-warm process, how to read the diagnostic log when
+  nothing fires, and a check that the detection survives into the next
+  launch. Flags that this must run on a `preview` build, not a dev client —
+  a headless dev-client relaunch needs Metro and fails for unrelated reasons.
+- **New step 4b**: verify Settings → Diagnostics, including deliberately
+  revoking ACCESS_BACKGROUND_LOCATION and confirming the screen reports it.
+  A diagnostics screen that only ever says "fine" is worse than none.
+- **Step 4 rewritten** around the onboarding path (now primary) and the
+  Android 11+ Settings redirect, including that a fresh install is required
+  because installing over the top keeps AsyncStorage and skips onboarding.
+- **All mock coordinates and radii corrected.** The plan still used
+  Dartford's old 51.4657, 0.2649 — which lands inside the new 1,400m radius,
+  so testing with it would have appeared to pass while proving nothing.
+  Added a table of all seven other crossings' `geo fix` values and radii.
+- A "three tests that actually matter" summary at the top.
+
 ## 2026-09-09 session, later: the Android 11+ settings-redirect trap
 
 Found while drafting tester instructions, and it would have wasted the next

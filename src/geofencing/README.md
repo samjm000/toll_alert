@@ -708,7 +708,39 @@ already confirmed correct before the reboot).
 
 ## Manual testing (Android)
 
-**Update 2026-09-05: this was already done once this session** — see
+**REVISED 2026-09-09. Read this before following the steps below.**
+
+The two "Confirmed by actually running this" passes recorded above both
+tested with the app alive — foregrounded or merely backgrounded with Metro
+attached and `start()` freshly called in that same JS context. That is the
+one situation the shipped app almost never runs in, and it is why both
+passes reported success while the engine could not survive process death
+at all. **A test plan that never force-stops the app cannot detect the
+single worst bug this project has had.** Step 5b below is new and exists
+specifically to close that hole.
+
+Also updated: every mock coordinate and radius quoted below changed on
+2026-09-09 when all eight geofences were re-coordinated (see "The other
+seven crossings" above). The old figures in earlier revisions of this file
+are wrong.
+
+### The three tests that actually matter
+
+If you only have time for three, do these, in this order:
+
+1. **Step 5b — cold start.** Force-stop the app, *then* inject the fix. This
+   is the real-world case: a phone that killed the app hours ago and is
+   relaunched headlessly by the OS to deliver a transition. If this fails,
+   nothing else matters.
+2. **Step 4 — the permission flow end to end**, including Android 11+
+   bouncing you out to the system Settings page and the app picking the
+   permission up when you return.
+3. **Step 4b — Diagnostics reports the truth.** Deliberately revoke a
+   permission and confirm the screen says so, in plain English.
+
+Everything else is regression cover.
+
+**Update 2026-09-05: an earlier version of this was done once** — see
 "Confirmed by actually running this" above for the results. The Android SDK
 is now installed at `%LOCALAPPDATA%\Android\Sdk`
 (`platform-tools`, `emulator`, `platforms;android-35`,
@@ -782,11 +814,32 @@ tap **Continue** there to load the actual bundle.
 
 ### 4. Turn on background monitoring
 
-In the app: Settings → "Monitor all crossings in the background" → toggle
-on → the rationale modal appears → "Continue" → the Android system location
-permission dialogs appear. Grant foreground location, then when prompted
-again (or redirected to system settings on Android 11+, per the modal's own
-copy) grant **"Allow all the time"**. You should then see:
+**Test the onboarding path first — it is now the primary one.** Since
+2026-09-09 the last onboarding screen ("One last thing" → **"Turn on
+crossing alerts"**) requests permission and starts monitoring itself,
+rather than deferring to the Settings toggle a real tester never found. To
+see it you need a genuinely fresh install: `adb uninstall
+com.tollalert.app` then reinstall, or Settings → Demo tools → "Replay
+intro". Installing over the top keeps AsyncStorage, so `onboardingComplete`
+stays true and you land on Home having tested nothing.
+
+**What should happen on Android 11+ (i.e. any current device):**
+1. A foreground location dialog — choose "While using the app".
+2. **Android opens its system Settings page, NOT a second dialog.**
+   `expo-location`'s own typings say so: *"On Android 11 or higher: this
+   method will open the system settings page."* Navigate to Permissions →
+   Location → **"Allow all the time"**, then press back.
+3. **On returning to the app, monitoring should switch itself on.** This is
+   the fix committed 2026-09-09: the permission request resolves while you
+   are still standing in Settings, so the app records the *intent* and
+   re-checks on foreground resume. If you come back to a screen still
+   saying monitoring is off, that regression is back — check the log for
+   `Background location was granted while the app was away`.
+4. A notification permission dialog — allow it.
+
+The Settings path (Settings → "Monitor all crossings in the background" →
+toggle on → rationale modal → "Continue") still exists and should be tested
+too. Either way you should then see:
 
 - The toggle flips to "On".
 - A persistent, low-priority notification: **"Toll Alert is watching for
@@ -808,18 +861,47 @@ it) — this session confirmed the intent launches without throwing, but
 nobody visually confirmed the dialog's actual content, so it's still worth
 a look.
 
+### 4b. Check Diagnostics tells the truth
+
+New 2026-09-09, and the thing a non-technical tester will be asked to read
+down the phone to you. Settings → Troubleshooting → **Diagnostics**.
+
+With everything granted it should show **"Ready"** and, under Detail:
+`Geofences registered with OS: Yes`, `Crossings loaded in this process: 9`,
+both location rows `granted`, `Notifications: granted`.
+
+Then **deliberately break it** and confirm the screen notices, because a
+diagnostics screen that only ever says "fine" is worse than none:
+
+```
+adb shell pm revoke com.tollalert.app android.permission.ACCESS_BACKGROUND_LOCATION
+```
+
+Reopen Diagnostics (or press Refresh). It should now show a red **Blocked**
+card reading *"Location is not set to 'Allow all the time'…"*. Re-grant with
+`adb shell pm grant com.tollalert.app android.permission.ACCESS_BACKGROUND_LOCATION`
+and confirm it returns to Ready.
+
+Also confirm the **event log** at the bottom is non-empty and that **Share**
+opens the system share sheet with readable text — that is the whole
+feedback channel for testers.
+
 ### 5. Simulate arriving at Dartford Crossing
 
 With the emulator running and the app backgrounded (press Home, don't
 force-close it), open the emulator's **Extended Controls** (the **⋯** button
 on the emulator's side toolbar) → **Location** tab, and either:
 
-- Type in the coordinates and click **Send**: **Latitude 51.4657,
-  Longitude 0.2649**, or
+- Type in the coordinates and click **Send**: **Latitude 51.46472,
+  Longitude 0.25861**, or
 - From a terminal, with the emulator running:
   ```
-  adb emu geo fix 0.2649 51.4657
+  adb emu geo fix 0.25861 51.46472
   ```
+  (Corrected 2026-09-09. Earlier revisions of this file said 51.4657,
+  0.2649 — that was the old, wrong geofence centre, 449m off the real
+  crossing. It still lands inside the new 1,400m radius, so testing with it
+  would appear to pass while proving nothing about the corrected value.)
   **`geo fix` takes LONGITUDE first, then LATITUDE** — the opposite order
   from how this README (and the app's config) lists coordinates. Getting
   this backwards is the single most common mistake here and will silently
@@ -835,7 +917,7 @@ fix. The fallback that worked:
 adb shell appops set --uid 2000 android:mock_location allow
 adb shell cmd location providers add-test-provider gps --requiresSatellite
 adb shell cmd location providers set-test-provider-enabled gps true
-adb shell cmd location providers set-test-provider-location gps --location 51.4657,0.2649
+adb shell cmd location providers set-test-provider-location gps --location 51.46472,0.25861
 ```
 (Latitude, longitude order here — opposite of `geo fix`.) Try `geo fix`
 first since it's the standard/documented approach; only reach for this if
@@ -864,13 +946,79 @@ notification body should open the Crossing Detail screen for Dartford with
 the same figures, fine stages, and the "Figures verified against Dart
 Charge (National Highways) on ..." footnote.
 
+### 5b. THE IMPORTANT ONE — detection with the app force-stopped
+
+New 2026-09-09. Every previous pass skipped this, which is exactly why the
+process-death bug survived two rounds of "confirmed working".
+
+Step 5 backgrounds the app but leaves it alive, so `start()` has already run
+in that JS context and `state.crossings` is populated. On a real phone that
+is the rare case: Android kills the app within minutes of being backgrounded
+and then relaunches it **headlessly** to deliver a geofence transition —
+a brand new JS context where module scope has run (so the task is
+registered) but `start()` never has. That is the case this step tests.
+
+**Build note:** run this on a `preview` build
+(`npm run build:android:preview`), not a dev client. A dev-client build
+relaunched headlessly needs to fetch its JS bundle from Metro; if Metro
+isn't reachable the relaunch fails for reasons that have nothing to do with
+this code, and you'll misread it as a detection failure.
+
+```bash
+# 1. Start well away from every crossing, with monitoring already on.
+adb emu geo fix -3.1883 55.9533          # Edinburgh
+
+# 2. Kill the app properly, and confirm it is actually dead.
+adb shell am force-stop com.tollalert.app
+adb shell pidof com.tollalert.app        # must print NOTHING
+
+# 3. Now arrive at Dartford, with no app process running.
+adb emu geo fix 0.25861 51.46472
+```
+
+**Expected result:** a **"Dartford detected"** notification, with the app
+still not running when the fix was injected. Delivery can take longer than
+step 5 — the OS has to start the process first — so allow a couple of
+minutes before calling it a failure.
+
+Confirm it went through the cold path rather than a still-warm one:
+
+```bash
+adb logcat -d -s ReactNativeJS | grep -i "cold-start hydrate"
+```
+
+You should see `Cold-start hydrate (geofence ENTER crossing:dartford-crossing):
+9 crossings, N remembered region states`. **If the notification fires but
+this line is absent, the process was still alive and you have not tested
+anything** — re-check step 2's `pidof`.
+
+**If nothing fires at all**, the log is the whole diagnosis and this is what
+the diagnostics work was for. Open the app afterwards and read Settings →
+Diagnostics, or:
+
+```bash
+adb logcat -d -s ReactNativeJS | grep TollAlert
+```
+
+A `geofence-task` line with no matching `detection` line means the event
+arrived and was dropped — read the reason it gives. No `geofence-task` line
+at all means the OS never delivered the transition, which points at battery
+optimisation or the emulator's stationary throttling (see step 5), not at
+the app.
+
+**Then check persistence**, which is the other half of the fix: reopen the
+app and confirm Dartford appears under **"Needs your attention"** on Home. A
+detection recorded headlessly is written to storage before the notification
+is posted, so it must survive into the next launch. If the notification
+arrived but Home is empty, the persistence path has regressed.
+
 ### 6. Trigger an exit, then re-trigger an entry
 
-Set the mock location somewhere clearly outside both Dartford's 600m radius
-and ULEZ's real boundary — e.g. `adb emu geo fix -3.1883 55.9533`
+Set the mock location somewhere clearly outside both Dartford's 1,400m
+radius and ULEZ's real boundary — e.g. `adb emu geo fix -3.1883 55.9533`
 (Edinburgh) comfortably clears both. No notification is expected here
 (exits are tracked internally for dedup, not notified). Then set it back
-to Dartford's coordinates (`adb emu geo fix 0.2649 51.4657`) again — this
+to Dartford's coordinates (`adb emu geo fix 0.25861 51.46472`) again — this
 session found the timing matters:
 
 - Returning after only **~1-2 minutes** away did not reliably re-fire the
@@ -885,10 +1033,25 @@ session found the timing matters:
 So: wait a genuine 3+ minutes away before concluding a missing second
 notification is a bug, not just unprocessed OS-level exit timing. If it
 still doesn't fire after that, that's worth reporting back with exactly
-what you did. Note that a **second real crossing** (e.g. Blackwall at
-300m, or Warburton at 150m — see "Per-crossing radius sizing" above) is a
-stricter version of the same test since you're not relying on memory of
-what "Dartford again" should look like.
+what you did. Note that a **second real crossing** is a stricter version of
+the same test, since you're not relying on memory of what "Dartford again"
+should look like. Post-2026-09-09 coordinates and radii:
+
+| Crossing | `geo fix` (lon lat) | Radius |
+|---|---|---|
+| Blackwall | `-0.00306 51.50444` | 350m |
+| Silvertown | `0.00806 51.50472` | 350m |
+| Mersey Gateway | `-2.7130 53.3528` | 1,100m |
+| Silver Jubilee | `-2.7377 53.3466` | 500m |
+| Tyne Tunnel | `-1.4847 54.986` | 900m |
+| Humber Bridge | `-0.45 53.7064` | 1,150m |
+| Warburton | `-2.45881 53.4074` | 550m |
+
+Blackwall and Silvertown are only 770m apart with 350m radii each, so they
+are the tightest pair — a fix at one should produce **exactly one**
+notification, naming that tunnel and not the other. (Both are inside the
+real ULEZ boundary, so a "ULEZ detected" alongside either is correct and
+expected, unlike at Dartford.)
 
 ### 7. Testing ULEZ (simpler now — a single mock position, no simulated route needed)
 
