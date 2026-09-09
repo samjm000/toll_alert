@@ -27,7 +27,27 @@ const CROSSING_CATEGORY_ID = 'toll-crossing';
  * successful detection. MAX importance is right here: the whole product is a
  * time-limited payment deadline.
  */
-const ANDROID_CHANNEL_ID = 'crossing-alerts';
+const ANDROID_CHANNEL_ID = 'crossing-alerts-v2';
+
+/**
+ * Channels created by earlier builds, deleted on startup.
+ *
+ * ANDROID CHANNELS ARE IMMUTABLE ONCE CREATED. After the first
+ * `setNotificationChannelAsync`, the OS ignores later changes to sound,
+ * importance and vibration for that channel id — the user owns those
+ * settings from then on, and only they can change them. So the silent
+ * channel shipped by the previous build would have stayed silent forever on
+ * any device that already had it, no matter what this file says.
+ *
+ * Bumping the id sidesteps that: a new id means a genuinely new channel with
+ * the corrected settings, and no reinstall is needed. The old ones are
+ * deleted so they don't linger as dead entries in the system notification
+ * settings screen.
+ *
+ * If you change sound, importance or vibration again, bump the id again and
+ * add the previous one here.
+ */
+const RETIRED_ANDROID_CHANNEL_IDS = ['crossing-alerts'];
 
 /**
  * Android 13+ (the tester's device is well past this) gates notifications
@@ -54,10 +74,29 @@ let channelReady = false;
 async function ensureAndroidChannel(): Promise<void> {
   if (Platform.OS !== 'android' || channelReady) return;
   try {
+    for (const retired of RETIRED_ANDROID_CHANNEL_IDS) {
+      await Notifications.deleteNotificationChannelAsync(retired).catch(() => {});
+    }
     await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
       name: 'Crossing alerts',
       importance: Notifications.AndroidImportance.MAX,
-      sound: 'default',
+      // `sound` is DELIBERATELY OMITTED, and must stay that way unless a real
+      // audio file is bundled. It used to be `sound: 'default'`, which looks
+      // sensible and is wrong: the field takes a custom sound *filename*, not
+      // a mode. AndroidXNotificationsChannelManager.createSoundUriFromArguments
+      // is explicit about the three cases —
+      //   key absent  -> Settings.System.DEFAULT_NOTIFICATION_URI  (what we want)
+      //   null        -> no sound at all
+      //   any string  -> resolved as a bundled filename
+      // — so 'default' sent it hunting for a `default.wav` that does not exist,
+      // logged "Custom sound 'default' not found in native app", and left the
+      // channel silent. A silent channel on an app whose entire job is a
+      // time-limited payment alert is a real failure, not console noise.
+      //
+      // To use a custom sound later: add the audio file to the repo and list it
+      // in app.json's expo-notifications plugin `sounds` array, then name the
+      // file here. It needs a native rebuild — the plugin copies it into
+      // android/app/src/main/res/raw at prebuild.
       enableVibrate: true,
       vibrationPattern: [0, 250, 250, 250],
       lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
