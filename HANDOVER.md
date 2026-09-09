@@ -11,6 +11,45 @@ the ULEZ zone) and reminds the user to pay before the deadline. See
 `README.md` for the full feature/architecture rundown and
 `src/geofencing/README.md` for the geofencing engine specifically.
 
+## 2026-09-09 session: FIRST CONFIRMED COLD-START DETECTION
+
+Preview build on an API 35 emulator, app force-stopped and confirmed dead
+with `pidof`, position injected at Dartford:
+
+```
+12:33:52.642  app            Re-armed background monitoring at launch
+12:33:52.874  geofence-task  ENTER crossing:dartford-crossing
+12:33:52.897  detection      Dartford detected (geofence)
+12:33:53.216  notifications  Posted "Dartford detected"
+```
+
+Confirmed working in one run: cold-start hydration, enter/exit dedup, the
+ULEZ wake-circle + fine-location path, no false ULEZ alert at Dartford, and
+all 9 regions registered with the corrected coordinates. The Android 11+
+settings-redirect resume also fired during setup
+(`Background location was granted while the app was away`).
+
+**Measured latency: ~144 seconds** from position injection to ENTER
+delivery, process relaunch included. First real figure the project has had.
+Two consequences, both recorded in `src/geofencing/README.md`:
+
+- The emulator script's 120s default timeout **failed a run that had
+  worked**, by 24 seconds, reporting "never appeared" for a notification
+  already in flight. Default raised to 300s and the failure message now
+  says to read the log before believing it.
+- Latency is not a miss. Android records the transition and delivers when
+  it can; two minutes is nothing against a deadline measured in days. Radius
+  buys the chance the OS samples location *at all* while inside, not
+  delivery before the vehicle leaves.
+
+One emulator, one measurement. Not a distribution.
+
+**Still unverified**: anything on real hardware in a moving vehicle, and the
+`postedTitles()` dumpsys parser — the run timed out before a notification was
+ever visible to it, so the regex has still never matched anything. Confirm
+with `adb shell dumpsys notification --noredact | findstr "android.title"`
+while an alert is in the shade before trusting a future PASS.
+
 ## 2026-09-09 session: silent notification channel
 
 Surfaced as a console error on the emulator:
