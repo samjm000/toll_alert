@@ -1,4 +1,5 @@
 import * as Location from 'expo-location';
+import { MOCK_CROSSINGS_CONFIG } from '../config/crossings';
 import { createGeofencingEngine } from './engine';
 
 /**
@@ -40,6 +41,11 @@ export const IOS_LOCATION_TASK_NAME = 'toll-alert-ios-location-task';
 export const iosGeofencingEngine = createGeofencingEngine({
   geofenceTaskName: IOS_GEOFENCE_TASK_NAME,
   locationTaskName: IOS_LOCATION_TASK_NAME,
+  // Re-derives the crossing list in a cold, headless task context (the
+  // OS relaunching the app purely to deliver a transition). Points at the
+  // same mock-config module the UI uses, so swapping it for a real
+  // `fetch(CONFIG_URL)` later stays a one-place change.
+  loadCrossings: () => MOCK_CROSSINGS_CONFIG.crossings,
   locationOptions: {
     accuracy: Location.Accuracy.Low,
     distanceInterval: 500,

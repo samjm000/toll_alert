@@ -6,6 +6,7 @@ import { HomeScreen } from '../screens/HomeScreen';
 import { CrossingDetailScreen } from '../screens/CrossingDetailScreen';
 import { SubscriptionScreen } from '../screens/SubscriptionScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { DiagnosticsScreen } from '../screens/DiagnosticsScreen';
 import { useAppState } from '../state/AppState';
 import { colors } from '../theme';
 
@@ -52,6 +53,11 @@ export function RootNavigator() {
             name="Settings"
             component={SettingsScreen}
             options={{ headerShown: true, title: 'Settings' }}
+          />
+          <Stack.Screen
+            name="Diagnostics"
+            component={DiagnosticsScreen}
+            options={{ headerShown: true, title: 'Diagnostics' }}
           />
         </>
       )}

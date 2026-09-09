@@ -11,6 +11,167 @@ the ULEZ zone) and reminds the user to pay before the deadline. See
 `README.md` for the full feature/architecture rundown and
 `src/geofencing/README.md` for the geofencing engine specifically.
 
+## 2026-09-09 session: first real tester got no notification
+
+**Report**: a tester (Rob's son, Samsung Android) installed the APK from
+`https://expo.dev/artifacts/eas/JmzsZvYUhSdgFVMFzlzoAPRaRaW5W25rRdXm8flymWE.apk`,
+drove over the Dartford Crossing and through the ULEZ, and got nothing —
+no alert, no anything.
+
+### Diagnosis
+
+Five defects in the code, any one of which alone produces exactly that
+symptom. Full write-up with the reasoning is in `src/geofencing/README.md`
+under "2026-09-09: why the first real tester got nothing"; summary:
+
+1. Background monitoring was off by default, buried in Settings, and not
+   persisted — the toggle reset to Off on every launch and nothing re-ran
+   `geofencing.start()`.
+2. **The core bug**: the engine's `state.crossings`/`state.onDetected` lived
+   only in module memory set by `start()`. Android relaunches the app
+   headlessly to deliver geofence transitions, into a JS context where
+   `start()` never ran, so every real detection matched against an empty
+   array and hit a silent `return`.
+3. Notification permission (Android 13+ `POST_NOTIFICATIONS`) was requested
+   at the moment of detection, from a headless task that cannot show a
+   dialog — so it could only ever fail, silently.
+4. No explicit Android notification channel, so importance fell back to the
+   platform default (silent shade entry on One UI, no banner).
+5. The notification was fired without being awaited; a task returning first
+   can have its JS context torn down before the notification posts.
+
+**Key diagnostic detail worth remembering**: the tester saw no *persistent*
+"Toll Alert is watching for crossings" foreground-service notification
+either. Dartford sits inside ULEZ's 37 km wake circle, so on a working build
+that one should have been on screen for the whole drive. Its absence is what
+distinguishes "never armed" from "armed but failed" — ask about it first
+next time.
+
+### Also worth checking before blaming the code
+
+`eas.json` only produces an `.apk` from the `development` (which sets
+`developmentClient: true`) and `preview` profiles; `production` produces an
+AAB. The build recorded in the 2026-09-06 entry below was a production AAB,
+so the `.apk` the tester installed came from one of the other two. **If it
+was a `development` build it boots to the expo-dev-client launcher and needs
+a Metro server — it cannot run standalone at all**, which would explain the
+symptom on its own before any of the above. This session could not confirm
+which profile it was (no EAS login, and expo.dev is blocked from this
+environment's network egress). Confirm with `eas build:list --platform
+android` before the next test drive, and hand testers a `preview` or
+`production` APK, never a `development` one.
+
+### Fixes shipped this session
+
+- `src/diagnostics/log.ts` — persistent on-device ring-buffer log
+  (AsyncStorage, 400 entries, safe from headless tasks, mirrored to
+  `console.log` for `adb logcat`). **Not telemetry** — nothing is uploaded;
+  the tester shares it manually. This respects the constraint stated in
+  `src/config/crossings.ts` (that comment has been amended to describe the
+  new manual channel).
+- `src/screens/DiagnosticsScreen.tsx` — Settings → Troubleshooting →
+  Diagnostics. Leads with a plain-English blocker list a non-technical
+  tester can read aloud ("Location is not set to Allow all the time"),
+  then the raw status and log, plus Share/Clear.
+- `src/state/persistence.ts` — AsyncStorage for the monitoring toggle,
+  crossing events, and the engine's inside/outside dedup map. All three
+  previously lived only in memory.
+- `src/geofencing/detection.ts` — one shared detection pipeline used by both
+  the React path and the headless path, so a simulated and a real crossing
+  do identical things.
+- `engine.ts` — `ensureHydrated()` (memoised against burst delivery),
+  persisted dedup, `getStatus()`, awaited detection chain, and **no silent
+  returns**: every previously-silent path now logs.
+- `AppState.tsx` — persists and re-arms monitoring at launch.
+- `notifications/index.ts` — explicit MAX-importance Android channel,
+  foreground-only permission requests, loud logging on a dropped alert.
+- `HomeScreen.tsx` — "Live tracking active" now reflects whether the engine
+  is actually armed, not the mock subscription flag. Showing it off the back
+  of a demo subscription is part of why the tester believed it was working.
+- `app.json` — `POST_NOTIFICATIONS` declared explicitly.
+
+Verified: `npx tsc --noEmit` clean, `npm test` 7/7. **Not verified on a
+device or emulator** — this environment has no Android SDK and expo.dev/
+docs.expo.dev are both blocked by network egress policy. The emulator plan in
+`src/geofencing/README.md` still applies and should be re-run, this time
+with the app **force-stopped** (`adb shell am force-stop com.tollalert.app`)
+before injecting the mock fix — that is the case every previous pass missed.
+
+### Handing the next APK to a tester
+
+Use the **`preview`** profile — `npm run build:android:preview` (added this
+session alongside a `//` note in `eas.json`). It produces a standalone
+release APK with a download link. **Never hand a tester a `development`
+build**: it sets `developmentClient: true` and boots to the expo-dev-client
+launcher asking for a Metro server URL, which is useless on a phone and is
+a live suspect for this whole incident.
+
+`autoIncrement` was added to the `preview` profile so each build gets a
+fresh versionCode and installs cleanly over the last one. If Android still
+refuses the install with a signature error, the previously installed APK was
+signed with a different key — uninstall first, which also clears
+AsyncStorage and gives a genuinely clean onboarding run.
+
+Onboarding now *arms* the app: the final Permissions screen's button
+requests location + notification permission and starts monitoring, instead
+of deferring to a Settings toggle a non-technical tester will never find.
+Ask the tester to confirm two things before driving anywhere: a permanent
+"Toll Alert is watching for crossings" notification in the shade, and
+Settings -> Diagnostics showing no blockers.
+
+### Dartford coordinates: fixed
+
+The centre was 449m east of the real crossing. Corrected to
+**(51.46472, 0.25861)** — the published crossing coordinate, corroborated by
+a second independent source agreeing to within 43m — and the radius widened
+600m -> 1400m, derived from the QEII bridge's published 2,871m end-to-end
+length (half-length 1,436m). Time inside the circle at 70mph goes from ~25s
+to ~90s.
+
+OS OpenData/OSM are both blocked by this environment's egress policy, so
+`coordinatesVerified` stays `false` — two agreeing published sources is a
+real improvement on a guess, not a survey. Guarded by three new tests in
+`src/config/crossings.test.ts`. Full reasoning in `src/geofencing/README.md`.
+
+**Note for whoever has network access**: the useful capability discovered
+this session is that web *search* works from here even though direct HTTP to
+overpass-api.de, nominatim, api.os.uk, expo.dev and docs.expo.dev is all
+blocked. That is how the Dartford coordinate was cross-checked.
+
+### All eight crossings re-coordinated
+
+Every point crossing was checked the same way, and **every one was wrong**.
+Three by more than a kilometre — Warburton 2,467m, Tyne Tunnel 2,431m,
+Mersey Gateway 1,707m — which is further than their own radius, so the
+driven route never entered those geofences at all and they could never have
+fired. Full table and per-crossing sourcing in `src/geofencing/README.md`.
+
+Radii are now derived from each structure's published length rather than the
+three-category guesswork, except where two crossings constrain each other.
+Silver Jubilee's radius went *down* (600 -> 500m): the old comment claimed
+"motorway-speed" by copying Dartford's reasoning, but it has carried local
+30mph traffic since Mersey Gateway opened.
+
+**Blackwall and Silvertown are only 770m apart** and should probably be
+merged into one crossing — both bores leave the same point on the Greenwich
+Peninsula, they already share a ChargingScheme, payment page and deadline,
+and no circular geofence can separate them on the southern approach. Keeping
+them apart caps both at 350m with a 70m margin. Left alone because it changes
+the crossing list, not just coordinates. This is the most worthwhile
+follow-up in the file.
+
+Tests now cover all eight centres against their published references, assert
+no two geofences overlap, and assert a minimum detectable radius — 19 tests
+total, all passing.
+
+**Method note**: OS OpenData, OSM, Overpass and Nominatim are all blocked by
+this environment's egress policy, but **web search is not**. Where a
+published source quoted an Ordnance Survey grid reference it was converted to
+WGS84 (Airy 1830 transverse-Mercator inverse + Helmert) and used as a
+cross-check. The Warburton conversion agreed with an independently quoted
+coordinate to 115m — the precision a 6-figure grid ref carries — which
+validated both the coordinate and the converter at once.
+
 ## 2026-09-06 session
 
 ### Radius correction (committed `ed667a9`)

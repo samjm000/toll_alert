@@ -12,4 +12,5 @@ export type RootStackParamList = {
   CrossingDetail: { eventId: string };
   Subscription: undefined;
   Settings: undefined;
+  Diagnostics: undefined;
 };

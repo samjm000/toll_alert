@@ -1,10 +1,13 @@
 # Background geofencing — status
 
-**Android: implemented AND run end-to-end on a real Android emulator —
-mock-GPS crossing detection, the real notification, and the enter/exit
-dedup fix all confirmed working (see "Confirmed by actually running this"
-below). iOS: implemented, out of scope for further work until there's a Mac
-for Xcode — see `ios.ts`.**
+**Android: implemented, and confirmed working on an emulator with the app in
+the foreground — but the first real-device tester got nothing at all, and
+five separate defects were found as a result. See "2026-09-09: why the first
+real tester got nothing" below before trusting any emulator result in this
+file: the passes recorded further down are real, but they only ever exercised
+a warm, foregrounded JS context, which is the one case the shipped app almost
+never runs in. iOS: implemented, out of scope for further work until there's
+a Mac for Xcode — see `ios.ts`.**
 The region-swapping strategy and point-in-polygon confirmation described
 below are real, working code — not stubs — built on `expo-location`'s
 CoreLocation/Android-Geofencing-API wrappers and `expo-task-manager`:
@@ -33,6 +36,193 @@ CoreLocation/Android-Geofencing-API wrappers and `expo-task-manager`:
   optimizations" dialog for this app via `expo-intent-launcher`, surfaced as
   the "Improve reliability" button in the Settings screen's "Reliability"
   section.
+
+## 2026-09-09: why the first real tester got nothing, and what changed
+
+The first real-device tester (Samsung, Android; drove over Dartford and
+through the ULEZ) received **no notification at all** — not even the
+persistent "Toll Alert is watching for crossings" foreground-service
+notification. That last detail is the diagnostic one: that notification
+appears the moment the fine-location task starts, and Dartford sits inside
+ULEZ's 37 km wake circle, so on a working build it should have been on
+screen for the whole drive. Its absence says monitoring was never armed at
+all, rather than armed-but-failing.
+
+Five separate defects were found, each of which alone is sufficient to
+produce exactly "nothing happened". They are listed in the order they bite.
+
+**1. Background monitoring was off by default, and could not stay on.**
+`backgroundMonitoringEnabled` was `useState(false)` with no persistence, and
+nothing called `geofencing.start()` at launch. Onboarding's Permissions
+screen explicitly *doesn't* request anything and defers to "the Settings
+screen's Background monitoring toggle" — which a non-technical tester has no
+reason to find. Even a tester who did find it lost it on the next app
+restart: the toggle read "Off" again and `start()` never re-ran. Fixed: the
+flag is persisted (`src/state/persistence.ts`) and re-armed from a mount
+effect in `AppState`.
+
+**2. The engine could not survive process death — the core bug.**
+`state.crossings` and `state.onDetected` lived only in module memory, set
+only by `start()`. But the whole design depends on the OS relaunching the app
+*headlessly* to deliver a transition: a fresh JS context where module scope
+runs (so `defineTask` registers) but `start()` never does. The task fired
+correctly, `state.crossings.find(...)` searched an empty array, and the
+handler hit a bare `return`. **Every real crossing detected while the app
+wasn't already running was silently discarded.** The emulator passes in the
+sections above never caught this because the app was in the foreground with
+Metro attached and `start()` had just run in that same context.
+Fixed: `ensureHydrated()` re-derives the crossing list via the new
+`EngineConfig.loadCrossings`, the inside/outside dedup map is persisted, and
+a detection with no React handler registered falls through to the shared
+headless pipeline in `detection.ts`.
+
+**3. Notification permission was requested at the moment of detection.**
+`presentCrossingNotification` called `requestNotificationPermissions()`
+inline and returned silently on failure. Android 13+ gates notifications
+behind runtime `POST_NOTIFICATIONS`, and a headless task cannot show a
+permission dialog — so on a device that had never granted it, the request
+could only ever fail, silently, forever. Fixed: permission is requested in
+the foreground when monitoring is enabled; the detection path only *checks*,
+and logs loudly when it has to drop an alert.
+
+**4. Notifications were posted without an explicit Android channel.**
+Android 8+ takes importance from the channel, not the request. Without a
+high-importance channel a successful detection can post silently into the
+shade with no banner and no sound — indistinguishable from nothing
+happening, particularly on One UI. Fixed: an explicit `crossing-alerts`
+channel at `AndroidImportance.MAX`.
+
+**5. The notification was fired without being awaited.**
+`recordCrossing` did `presentCrossingNotification(...).catch(() => {})` and
+the task handlers were synchronous. A background task that returns before
+its notification promise resolves can have its JS context torn down first.
+Fixed: `CrossingDetectedHandler` now returns a promise and the engine awaits
+the whole chain.
+
+### Fixed: Dartford's geofence was 449m off the road
+
+The centre shipped as (51.4657, 0.2649) — **449m east of the actual
+crossing**. With the then-600m radius, a vehicle driving the A282 was inside
+the circle for only about 25 seconds at 70mph, against transition latency
+this project has measured in minutes. It would have missed most crossings
+even with all five defects above fixed.
+
+Corrected to **(51.46472, 0.25861)** — the published Dartford Crossing
+coordinate (51°27'53"N 0°15'31"E), corroborated by a second independent
+source (51.4651, 0.2587) that agrees to within **43m**.
+
+`coordinatesVerified` deliberately stays `false`. That flag means checked
+against OS OpenData/OSM specifically, and neither was reachable from the
+environment this was fixed in (both are blocked by network egress policy,
+as are expo.dev and docs.expo.dev). Two agreeing published sources beat a
+landmark-level guess by a wide margin; they are not a survey.
+
+The radius was widened **600m -> 1400m** at the same time, derived rather
+than guessed: the QEII bridge crossing including its approach viaducts is
+2,871m end to end (1,051m north viaduct + 821m bridge + 1,008m south
+viaduct), so 1,436m is the half-length from mid-river. 1,400m covers the
+whole structure a charged vehicle drives over, and the 1,430m tunnels on the
+northbound side. It also raises time-inside-the-circle from ~38s to ~90s at
+70mph — the number that actually decides whether Android ever samples
+location while the vehicle is in there.
+
+**Known trade-off**: 1,400m from mid-river reaches local roads on both banks
+(West Thurrock north, Crossways/A206 south), so someone near the crossing who
+doesn't use it can get a false alert. Deliberate: a miss costs the user a
+£70+ PCN, a false positive costs a dismissible notification. Needs real-world
+tuning.
+
+**The principled fix is a polygon.** The charge applies to the whole A282
+between M25 J1A and J31, so the charged area is a corridor, not a circle, and
+this engine already supports polygon crossings (see ULEZ). Not done here
+because hand-drawing that corridor from guessed junction coordinates would
+reintroduce exactly the class of error this change fixes — it needs real
+corridor geometry.
+
+Three regression tests now guard this (`src/config/crossings.test.ts`): the
+centre must be within 150m of the published coordinate, the radius must cover
+the structure and give over 60s inside at 70mph, and Dartford must not fall
+inside the ULEZ polygon (the pass-1 double-notification bug).
+
+### The other seven crossings, checked the same way
+
+Done in the same pass. Every one of the eight point crossings was a
+landmark-level guess; **all eight were wrong**, and three were wrong by more
+than a kilometre — enough that the driven route never entered the geofence
+at all, so those crossings could never have fired regardless of any other
+fix.
+
+| Crossing | Was off by | Radius | Best source |
+|---|---|---|---|
+| Warburton | **2,467 m** | 250 -> 550 m | OS grid refs, Rixton and Warburton Bridge Order 2024 |
+| Tyne Tunnel | **2,431 m** | 300 -> 900 m | latitude.to + OS ref NZ329659 (185 m apart) |
+| Mersey Gateway | **1,707 m** | 600 -> 1,100 m | Wikipedia, confirmed by its documented offset from Silver Jubilee |
+| Silvertown | 830 m | 300 -> 350 m | Wikipedia (single source) |
+| Blackwall | 502 m | 300 -> 350 m | Wikipedia + latitude.to + OS refs for the southern structures |
+| Dartford | 449 m | 600 -> 1,400 m | Wikipedia + latitude.to (43 m apart) |
+| Humber Bridge | 436 m | 250 -> 1,150 m | Wikipedia + latitude.to (14 m apart) |
+| Silver Jubilee | 257 m | 600 -> 500 m | Wikipedia |
+
+Two of the old values were self-evidently placeholders once you look:
+Warburton's latitude was the bare string `53.4`, and Humber's 250 m radius
+did not reach the ends of a 2,220 m bridge.
+
+Radii are derived from each structure's published length where nothing else
+constrains them (half-length from the centre, rounded up to clear the
+portals), which is why they now differ so much — the structures do. Silver
+Jubilee went *down*, from 600 m to 500 m: the old comment claimed
+"motorway-speed open crossing" by copying Dartford's reasoning, but since
+Mersey Gateway opened in 2017 it carries local 30 mph traffic, so it needs
+far less radius for the same time inside.
+
+**Two pairs are close enough to constrain each other.** Geofence circles must
+not overlap, or one crossing fires two notifications naming the wrong toll
+and the wrong deadline. `crossings.test.ts` enforces this:
+
+- Mersey Gateway and Silver Jubilee are 1,779 m apart; 1,100 + 500 leaves a
+  179 m margin.
+- **Blackwall and Silvertown are only 770 m apart**; 350 + 350 leaves 70 m.
+  That is uncomfortably tight, and it caps both well below the 675 m
+  half-length of the Blackwall bore.
+
+**Blackwall and Silvertown should probably be one crossing.** Both bores
+leave the *same* point on the Greenwich Peninsula and only diverge on the
+north side, so on the southern approach no circular geofence can tell them
+apart even in principle. They already share one `ChargingScheme`, one
+operator, one payment page and one deadline — the label is the only thing
+that differs. Merging them would allow a ~900 m radius covering both bores
+instead of the 350 m compromise. Not done here because it changes the
+crossing list rather than just its coordinates.
+
+**Expected, not a bug**: Blackwall and Silvertown both fall inside the real
+ULEZ polygon, so a non-compliant vehicle using either tunnel genuinely
+incurs both charges and should get both notifications. This is not a return
+of the old placeholder-rectangle false positive — that one put *Dartford*
+inside ULEZ, which `crossings.test.ts` still guards against explicitly.
+
+`coordinatesVerified` stays `false` on all eight. OS OpenData and OSM are
+both blocked by this environment's network egress policy, so none of this is
+survey data. Where an Ordnance Survey grid reference was quoted in a
+published source it was converted to WGS84 and used as a cross-check — the
+Warburton conversion agreed with an independently quoted coordinate to 115 m,
+which is exactly the precision a 6-figure grid reference carries, and that
+agreement is also what validated the conversion itself.
+
+### Diagnosing this in future
+
+`src/diagnostics/log.ts` is a persistent on-device log, surfaced at
+Settings -> Diagnostics with a blocker summary a non-technical tester can
+read aloud, and a Share button. It respects the project's
+no-telemetry constraint: nothing is uploaded, ever; the tester chooses to
+send it. Every previously-silent path now writes to it — task errors, empty
+payloads, unmatched region identifiers, permission refusals, and
+`startLocationUpdatesAsync` failures (Android 12+ can refuse to start a
+location foreground service from the background, which used to be swallowed
+by a bare `.catch(() => {})` and made total ULEZ failure invisible).
+
+The Diagnostics screen also reads back what the **OS** believes
+(`getStatus()`), not what the UI's toggle claims. Those two disagreeing is
+the signature of every bug above.
 
 ## Why one task, not one per crossing
 

@@ -15,10 +15,16 @@ import { MOCK_CROSSINGS_CONFIG } from '../config/crossings';
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 export function HomeScreen({ navigation }: Props) {
-  const { subscription, crossingEvents, simulateCrossing, resetOnboarding } = useAppState();
+  const { subscription, crossingEvents, simulateCrossing, resetOnboarding, backgroundMonitoringEnabled } =
+    useAppState();
 
   const pendingEvents = crossingEvents.filter((e) => e.status === 'pending');
-  const isLive = subscription.status === 'active';
+  // Reflects whether the geofencing engine is actually armed, NOT the mock
+  // subscription flag it used to read. Showing "Live tracking active" off the
+  // back of a demo subscription — while no geofence was registered with the OS
+  // — is what told a real tester the app was watching for crossings when it
+  // was doing nothing at all.
+  const isLive = backgroundMonitoringEnabled;
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -31,10 +37,12 @@ export function HomeScreen({ navigation }: Props) {
               {isLive ? (
                 <View style={styles.liveRow}>
                   <PulsingDot color={colors.success} size={7} />
-                  <Text style={styles.liveText}>Live tracking active</Text>
+                  <Text style={styles.liveText}>
+                    Watching {MOCK_CROSSINGS_CONFIG.crossings.length} crossings
+                  </Text>
                 </View>
               ) : (
-                <Text style={styles.subtitle}>Watching {MOCK_CROSSINGS_CONFIG.crossings.length} crossings</Text>
+                <Text style={styles.subtitle}>Not watching — turn on background monitoring</Text>
               )}
             </View>
           </View>
