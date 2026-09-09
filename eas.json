@@ -12,6 +12,8 @@
     },
     "preview": {
       "distribution": "internal",
+      "//": "The profile to hand testers. Unlike \"development\" it does NOT set developmentClient, so it produces a standalone release APK that runs on its own — a development-profile APK boots to the expo-dev-client launcher and needs a Metro server, which is useless on a tester's phone.",
+      "autoIncrement": true,
       "android": {
         "buildType": "apk"
       }

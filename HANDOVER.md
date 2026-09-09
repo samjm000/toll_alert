@@ -97,6 +97,28 @@ docs.expo.dev are both blocked by network egress policy. The emulator plan in
 with the app **force-stopped** (`adb shell am force-stop com.tollalert.app`)
 before injecting the mock fix — that is the case every previous pass missed.
 
+### Handing the next APK to a tester
+
+Use the **`preview`** profile — `npm run build:android:preview` (added this
+session alongside a `//` note in `eas.json`). It produces a standalone
+release APK with a download link. **Never hand a tester a `development`
+build**: it sets `developmentClient: true` and boots to the expo-dev-client
+launcher asking for a Metro server URL, which is useless on a phone and is
+a live suspect for this whole incident.
+
+`autoIncrement` was added to the `preview` profile so each build gets a
+fresh versionCode and installs cleanly over the last one. If Android still
+refuses the install with a signature error, the previously installed APK was
+signed with a different key — uninstall first, which also clears
+AsyncStorage and gives a genuinely clean onboarding run.
+
+Onboarding now *arms* the app: the final Permissions screen's button
+requests location + notification permission and starts monitoring, instead
+of deferring to a Settings toggle a non-technical tester will never find.
+Ask the tester to confirm two things before driving anywhere: a permanent
+"Toll Alert is watching for crossings" notification in the shade, and
+Settings -> Diagnostics showing no blockers.
+
 ### Still open (not fixed here)
 
 Dartford's geofence centre (51.4657, 0.2649) appears to sit ~510-540m east
