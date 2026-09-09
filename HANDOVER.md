@@ -27,6 +27,83 @@ Worth capturing next time a tester drives: which crossing, roughly how long
 after crossing the alert arrived, whether it made a sound, and whether
 anything fired that should not have.
 
+## BUILT 2026-09-09: repeating reminders + chargeable hours
+
+Both of the gaps recorded below are now implemented. The sections below are
+kept because they explain *why* each was missing and what was verified.
+
+### Reminders — client spec, via Rob (2026-09-09)
+
+> "Set the clock to go off 11.45pm, 4am, 8am, 12, 4pm, 8pm. And then give
+> them an option to set their own warning times so they can suit their own
+> timetable. Let it warn them continuously until they press paid."
+
+Read as 23:45 plus a four-hourly cycle from 04:00. **The "12" was taken as
+NOON**, since it sits between 8am and 4pm in his list — he wrote "12. am",
+which literally means midnight. Worth confirming with him; it is a one-line
+change in `DEFAULT_REMINDER_TIMES`.
+
+Implemented in `src/notifications/reminders.ts`:
+
+- **Repeating DAILY triggers**, not a scheduled list of dates. "Continuously"
+  rules out a finite list: that needs a rolling window topped up whenever the
+  app opens, and stops dead if the user never opens it — which is exactly the
+  user this feature exists for. A DAILY trigger repeats by itself forever
+  until cancelled.
+- **One notification per TIME SLOT, not per crossing.** Per-crossing would
+  multiply: three unpaid crossings at six times a day is eighteen
+  notifications, which trains people to swipe without reading, and on iOS
+  would collide with the 64-pending cap. Batched, the total is always exactly
+  the number of configured times.
+- The cost of batching is that a repeating notification's text is fixed when
+  scheduled, so `syncReminders` re-runs on every change to the pending set
+  (detection, mark-paid, launch) and rewrites it.
+- **Pressing paid stops them**: `markPaid` persists first, *then* resyncs —
+  resyncing before the write would reschedule against the stale set and keep
+  nagging about the crossing just paid.
+- Times are user-editable in Settings -> Reminder times (tap to remove, add
+  your own, reset). An empty list is a real choice and is respected, not
+  overwritten by the defaults.
+- Diagnostics shows what is actually scheduled, so a tester can confirm it.
+
+### Chargeable hours — `src/config/chargeableHours.ts`
+
+Pure, dependency-free, and unit-tested (9 cases) because it is the one piece
+of this that can be tested without the JSON-import problem.
+
+- Dartford, Blackwall, Silvertown: `{ from: '06:00', to: '22:00' }`. The TfL
+  pair also carry `freeOnDates: ['12-25']`.
+- ULEZ: `{ freeOnDates: ['12-25'] }` — 24/7 otherwise, which is why `from`
+  and `to` are optional.
+- **A 15-minute grace period at the closing edge only.** Detection time is
+  not crossing time: measured delivery was ~144s and Android guarantees
+  nothing, so a genuine 21:58 crossing can be detected at 22:01. The two
+  errors are not equally costly — suppressing a real charge costs a £70+ PCN,
+  alerting for a free one costs a dismissible notification — so the window
+  stays open a little longer, and the grace is deliberately NOT applied at
+  the opening edge.
+- Unparseable hours **fail open**, for the same reason.
+- `recordDetection` returns `null` when a crossing is entered outside its
+  chargeable hours: nothing recorded, nothing notified, nothing to remind
+  about. Simulated crossings bypass the check, so the demo button never looks
+  broken at 3am.
+
+**The TfL hours came from published third parties** (blackcircles.com,
+epcplc.com, minicabs.co.uk), not tfl.gov.uk directly. Re-verify before
+relying on them.
+
+### Still not done
+
+- **ULEZ is a daily charge and still fires per entry.** Driving in and out
+  twice in a day is two alerts for one £12.50 — and now two sets of
+  reminders. This is the next thing to fix in this area.
+- The Subscription screen still promises 7-day renewal and lapsed reminders
+  that nothing schedules.
+- Android 12+ may deliver repeating alarms inexactly without
+  `SCHEDULE_EXACT_ALARM`. For the 23:45 "last chance before midnight" slot a
+  drift past midnight would make it useless. Not observed, not tested.
+- **None of this has run on a device.** Written and type-checked only.
+
 ## NOT BUILT: payment reminders (verified 2026-09-09)
 
 **Reminders were never implemented. They were not dropped or lost.**

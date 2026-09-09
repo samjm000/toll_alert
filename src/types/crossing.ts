@@ -7,6 +7,8 @@
  * change, not a redesign.
  */
 
+import type { ChargeableHours } from '../config/chargeableHours';
+
 export type CrossingType = 'point' | 'zone';
 
 export interface PointGeofence {
@@ -110,6 +112,15 @@ export interface Crossing {
   paymentUrl: string;
   infoUrl?: string;
   scheme: ChargingScheme;
+  /**
+   * When the charge actually applies. Omit for a crossing charged 24/7 with
+   * no free dates.
+   *
+   * Without this the app alerted at any hour, so a 3am Dartford crossing told
+   * the driver to pay a charge that is free between 22:00 and 06:00 — see
+   * src/config/chargeableHours.ts.
+   */
+  chargeableHours?: ChargeableHours;
   /**
    * False until `geofence`'s coordinates have been checked against a
    * surveyed source (OS OpenData / OpenStreetMap) and the radius sized for

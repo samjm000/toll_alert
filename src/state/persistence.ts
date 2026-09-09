@@ -19,6 +19,7 @@ import { logEvent } from '../diagnostics/log';
  */
 
 const MONITORING_KEY = 'tollalert.backgroundMonitoring.v1';
+const REMINDER_TIMES_KEY = 'tollalert.reminderTimes.v1';
 const MONITORING_INTENT_KEY = 'tollalert.backgroundMonitoringIntent.v1';
 const EVENTS_KEY = 'tollalert.crossingEvents.v1';
 const INSIDE_KEY = 'tollalert.insideRegion.v1';
@@ -79,6 +80,55 @@ export async function saveMonitoringIntent(intended: boolean): Promise<void> {
   } catch {
     logEvent('warn', 'persistence', 'Could not persist the monitoring intent');
   }
+}
+
+/* ------------------------------------------------------------------ *
+ * Reminder times
+ * ------------------------------------------------------------------ */
+
+/**
+ * When the app nags about an unpaid crossing, as "HH:MM" in the device's
+ * local time.
+ *
+ * Specified by the client (2026-09-09): 23:45, then every four hours from
+ * 04:00. The 23:45 slot is deliberate rather than part of the cycle — it is
+ * the last practical warning before a midnight deadline, which is when
+ * Dartford, Mersey Gateway, Humber and Warburton all fall due.
+ *
+ * Users can replace this list entirely; see `loadReminderTimes`.
+ */
+export const DEFAULT_REMINDER_TIMES = ['04:00', '08:00', '12:00', '16:00', '20:00', '23:45'];
+
+/** Sorted, de-duplicated, and stripped of anything that isn't a real HH:MM. */
+function normaliseTimes(times: unknown): string[] {
+  if (!Array.isArray(times)) return [...DEFAULT_REMINDER_TIMES];
+  const valid = times.filter(
+    (t): t is string => typeof t === 'string' && /^([01]\d|2[0-3]):([0-5]\d)$/.test(t)
+  );
+  return [...new Set(valid)].sort();
+}
+
+export async function loadReminderTimes(): Promise<string[]> {
+  try {
+    const raw = await AsyncStorage.getItem(REMINDER_TIMES_KEY);
+    if (!raw) return [...DEFAULT_REMINDER_TIMES];
+    // An empty stored array is a real choice — "no reminders" — and must not
+    // be silently replaced by the defaults.
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? normaliseTimes(parsed) : [...DEFAULT_REMINDER_TIMES];
+  } catch {
+    return [...DEFAULT_REMINDER_TIMES];
+  }
+}
+
+export async function saveReminderTimes(times: string[]): Promise<string[]> {
+  const normalised = normaliseTimes(times);
+  try {
+    await AsyncStorage.setItem(REMINDER_TIMES_KEY, JSON.stringify(normalised));
+  } catch {
+    logEvent('warn', 'persistence', 'Could not persist reminder times');
+  }
+  return normalised;
 }
 
 /* ------------------------------------------------------------------ *

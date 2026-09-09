@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BackgroundLocationRationaleModal } from '../components/BackgroundLocationRationaleModal';
+import { ReminderTimePickerModal } from '../components/ReminderTimePickerModal';
 import { Card } from '../components/Card';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { StatusPill } from '../components/StatusPill';
@@ -14,13 +15,16 @@ import { geofencing } from '../geofencing';
 import { EngineStatus } from '../geofencing/types';
 import { getNotificationPermissionStatus } from '../notifications';
 import { useAppState } from '../state/AppState';
+import { DEFAULT_REMINDER_TIMES } from '../state/persistence';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
 export function SettingsScreen({ navigation }: Props) {
-  const { resetOnboarding, backgroundMonitoringEnabled, setBackgroundMonitoringEnabled } = useAppState();
+  const { resetOnboarding, backgroundMonitoringEnabled, setBackgroundMonitoringEnabled, reminderTimes, setReminderTimes } =
+    useAppState();
   const [togglingMonitoring, setTogglingMonitoring] = useState(false);
   const [rationaleVisible, setRationaleVisible] = useState(false);
+  const [timePickerVisible, setTimePickerVisible] = useState(false);
 
   // Real, live permission state. These two rows used to be hardcoded
   // "Mocked" pills, which meant the one screen a tester would look at to
@@ -176,6 +180,48 @@ export function SettingsScreen({ navigation }: Props) {
           </Pressable>
         </View>
 
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Reminder times</Text>
+          <Text style={styles.sectionCaption}>
+            If a crossing is still unpaid, Toll Alert warns you again at these times every day until
+            you tap "Mark as paid". Tap a time to remove it, or add your own to suit your routine.
+          </Text>
+          <Card>
+            {reminderTimes.length === 0 ? (
+              <Text style={styles.remindersOff}>
+                No reminder times set — you'll only be told once, when the crossing is detected.
+              </Text>
+            ) : (
+              <View style={styles.timeChips}>
+                {reminderTimes.map((time) => (
+                  <Pressable
+                    key={time}
+                    onPress={() => setReminderTimes(reminderTimes.filter((t) => t !== time))}
+                    style={styles.timeChip}
+                  >
+                    <Text style={styles.timeChipText}>{time}</Text>
+                    <Text style={styles.timeChipRemove}>×</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </Card>
+          <View style={styles.reminderActions}>
+            <PrimaryButton
+              label="Add a time"
+              variant="secondary"
+              onPress={() => setTimePickerVisible(true)}
+              style={{ flex: 1 }}
+            />
+            <PrimaryButton
+              label="Reset"
+              variant="secondary"
+              onPress={() => setReminderTimes([...DEFAULT_REMINDER_TIMES])}
+              style={{ flex: 1 }}
+            />
+          </View>
+        </View>
+
         {Platform.OS === 'android' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Reliability</Text>
@@ -223,6 +269,15 @@ export function SettingsScreen({ navigation }: Props) {
         <Text style={styles.version}>Toll Alert — UI mockup build</Text>
       </ScrollView>
 
+      <ReminderTimePickerModal
+        visible={timePickerVisible}
+        onCancel={() => setTimePickerVisible(false)}
+        onAdd={(time) => {
+          setTimePickerVisible(false);
+          setReminderTimes([...reminderTimes, time]);
+        }}
+      />
+
       <BackgroundLocationRationaleModal
         visible={rationaleVisible}
         onCancel={() => setRationaleVisible(false)}
@@ -260,6 +315,20 @@ const styles = StyleSheet.create({
   crossingMeta: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
   crossingVerified: { fontSize: 11, color: colors.textMuted, marginTop: 2, fontStyle: 'italic' },
   permRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  timeChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  timeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.sm,
+    backgroundColor: colors.primarySoftBg,
+  },
+  timeChipText: { fontSize: 15, fontWeight: '700', color: colors.primary },
+  timeChipRemove: { fontSize: 17, fontWeight: '700', color: colors.primary, opacity: 0.7 },
+  remindersOff: { fontSize: 14, color: colors.textMuted, lineHeight: 20 },
+  reminderActions: { flexDirection: 'row', gap: spacing.sm },
   permLabel: { fontSize: 14, color: colors.text },
   chevron: { fontSize: 20, color: colors.textMuted },
   typeIcon: {
