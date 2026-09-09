@@ -237,6 +237,42 @@ function preflight() {
   console.log(`Package: ${PACKAGE}`);
 }
 
+/**
+ * Warns if background monitoring looks like it was never armed.
+ *
+ * Granting permissions is NOT the same as registering geofences. Regions
+ * only reach the OS when `geofencing.start()` runs, which happens when the
+ * user turns alerts on — during onboarding, or from the Settings toggle.
+ * On a fresh install with nobody having opened the app, nothing is
+ * registered, so every case here fails with "expected ... never appeared"
+ * and no hint as to why. That is a wasted twenty minutes.
+ *
+ * Deliberately a WARNING, not a hard failure: `dumpsys location`'s format
+ * varies across Android versions and this heuristic has not been verified
+ * against every one of them, so a false negative must not block a run that
+ * would otherwise work.
+ */
+function warnIfNotArmed() {
+  const dump = shell('dumpsys location', { allowFail: true });
+  if (dump.includes(PACKAGE)) {
+    console.log('Geofences: registered with the OS');
+    return;
+  }
+
+  console.log('');
+  console.log('  WARNING  No geofences for this app found in `dumpsys location`.');
+  console.log('           Granting permissions does not register them — the app has to be');
+  console.log('           opened and monitoring turned on at least once:');
+  console.log('');
+  console.log('             1. Open Toll Alert on the device');
+  console.log('             2. Tap "Turn on crossing alerts" (or Settings > Background monitoring)');
+  console.log('             3. Confirm the home screen shows "Watching N crossings"');
+  console.log('');
+  console.log('           Continuing anyway — this check is a heuristic and can be wrong.');
+  console.log('           But if every case below fails, this is the first thing to rule out.');
+  console.log('');
+}
+
 function grantPermissions() {
   const permissions = [
     'android.permission.ACCESS_FINE_LOCATION',
@@ -406,6 +442,7 @@ async function main() {
   preflight();
   grantPermissions();
   enableMockLocation();
+  warnIfNotArmed();
   console.log(`Mode:    ${cold ? 'COLD START (force-stop before each case)' : 'warm (app left running)'}`);
   console.log(`Timeout: ${timeoutSeconds}s per case`);
   console.log(

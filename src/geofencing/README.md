@@ -744,6 +744,15 @@ npm run test:emulator -- --timeout 240             # slower device
 npm run test:emulator -- --no-cold                 # leave the app running
 ```
 
+**Arm monitoring first.** Granting permissions is not the same as registering
+geofences — regions only reach the OS when `geofencing.start()` runs, which
+happens when a user turns alerts on. On a fresh install that nobody has
+opened, nothing is registered and every case fails with no useful reason. So:
+install, open the app, tap **"Turn on crossing alerts"**, confirm the home
+screen reads "Watching N crossings", *then* run the script. It warns if it
+cannot find the app's geofences in `dumpsys location`, but that check is a
+heuristic across Android versions, so it warns rather than blocks.
+
 What it does, per case: grants the four permissions, enables mock location,
 moves the device far away, **force-stops the app and confirms with `pidof`
 that the process is actually gone**, injects the crossing's coordinates, then
