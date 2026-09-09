@@ -11,6 +11,42 @@ the ULEZ zone) and reminds the user to pay before the deadline. See
 `README.md` for the full feature/architecture rundown and
 `src/geofencing/README.md` for the geofencing engine specifically.
 
+## 2026-09-09 session, later: the Android 11+ settings-redirect trap
+
+Found while drafting tester instructions, and it would have wasted the next
+drive on its own.
+
+`expo-location`'s own SDK 57 typings say it plainly: **"On Android 11 or
+higher: `requestBackgroundPermissionsAsync` will open the system settings
+page."** No dialog. It navigates away and the promise resolves immediately,
+while the user is still standing on that Settings screen deciding.
+
+So the onboarding flow added earlier this session had a hole: it called
+`requestPermissions()`, got `false` back (correctly — nothing was granted
+*yet*), saved monitoring as off and told the user permission was refused.
+A tester who then did exactly the right thing — Permissions → Location →
+"Allow all the time" — came back to an app that was still switched off and
+claiming they'd denied it. Every Samsung in service today is well past
+Android 11, so this was the guaranteed path, not an edge case.
+
+Fixed in three parts:
+- `persistence.ts` now stores a monitoring **intent** separately from
+  monitoring **enabled**. Intent is written *before* the permission request,
+  precisely because the request navigates away.
+- `AppState.tsx` listens for the app returning to the foreground. If intent
+  is set and both location permissions are now granted, it starts the engine
+  and switches monitoring on. A `startingRef` guard stops this racing the
+  launch-time re-arm.
+- The onboarding copy no longer promises a popup Android will not show. On
+  Android it now describes the Settings redirect step by step; the failure
+  alert is retitled "One step left" and asks the user to finish in Settings
+  rather than telling them they refused.
+
+`BackgroundLocationRationaleModal` already described this correctly for the
+Settings-toggle path — the onboarding path added earlier this session simply
+didn't reuse that knowledge. Worth reading that component before touching
+any permission copy.
+
 ## 2026-09-09 session: first real tester got no notification
 
 **Report**: a tester (Rob's son, Samsung Android) installed the APK from
