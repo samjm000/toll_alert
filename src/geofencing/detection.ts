@@ -23,23 +23,32 @@ export async function recordDetection(
   crossing: Crossing,
   source: 'geofence' | 'simulated'
 ): Promise<CrossingEvent | null> {
-  // Nothing owed means nothing to alert about, and nothing to nag about
-  // later. Three crossings are free 22:00-06:00; alerting a night-shift
-  // driver at 3am for a charge that does not exist is the fastest way to
-  // teach someone to ignore the app.
+  // Three crossings are free 22:00-06:00, so a night crossing owes nothing:
+  // no pending event, and therefore no "Needs your attention" entry and no
+  // repeating reminders for a charge that does not exist. Waking a
+  // night-shift driver six times a day to pay £3.50 they never owed is the
+  // fastest way to teach someone to ignore the app.
   //
-  // Simulated detections deliberately bypass this: the Home screen's
-  // "Simulate crossing" button is a demo tool, and having it silently do
-  // nothing at 3am would look like a broken button.
+  // It is still ANNOUNCED, though, which is the deliberate part. These
+  // charging hours came from published third parties rather than the
+  // operators, and suppressing silently trades a notification the driver can
+  // ignore for a £70+ PCN if the hours are wrong. So the alert goes out
+  // saying there is nothing to pay, quoting the window that made that
+  // decision — the driver can see the reasoning and challenge it.
+  //
+  // Simulated detections bypass the check entirely: the Home screen's
+  // "Simulate crossing" button is a demo tool, and having it report "nothing
+  // to pay" at 3am would look like a broken button.
   const now = new Date();
 
   if (source === 'geofence' && !isChargeableAt(crossing.chargeableHours, now)) {
     await logEvent(
       'info',
       'detection',
-      `${crossing.shortName} entered but NOT charged at this time — no alert raised`,
+      `${crossing.shortName} entered outside charging hours — announced as free, no charge recorded`,
       { chargeableHours: crossing.chargeableHours }
     );
+    await presentCrossingNotification(crossing, `${crossing.id}-${now.getTime()}-free`, false);
     return null;
   }
 
