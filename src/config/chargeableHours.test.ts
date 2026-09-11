@@ -5,6 +5,7 @@ import {
   DEFAULT_GRACE_MINUTES,
   hasBeenChargedToday,
   isSameLocalDay,
+  describeChargeableWindow,
 } from './chargeableHours.ts';
 
 /** Local-time Date on an arbitrary non-Christmas day. */
@@ -100,4 +101,16 @@ test('isSameLocalDay is a calendar-day comparison, not a 24-hour window', () => 
   assert.equal(isSameLocalDay(new Date(2026, 5, 15, 0, 1), new Date(2026, 5, 15, 23, 59)), true);
   // 25 minutes apart, but either side of midnight — different charging days.
   assert.equal(isSameLocalDay(new Date(2026, 5, 15, 23, 50), new Date(2026, 5, 16, 0, 15)), false);
+});
+
+test('describeChargeableWindow quotes the window shown to the driver', () => {
+  // This string ends up in a notification, and is the only place a wrong set
+  // of charging hours becomes visible to someone who can tell it is wrong.
+  assert.equal(describeChargeableWindow({ from: '06:00', to: '22:00' }), '06:00-22:00');
+});
+
+test('describeChargeableWindow returns null when there is no window to quote', () => {
+  assert.equal(describeChargeableWindow(undefined), null, 'charged around the clock');
+  assert.equal(describeChargeableWindow({ freeOnDates: ['12-25'] }), null, 'free dates but no window');
+  assert.equal(describeChargeableWindow({ from: '6am', to: '22:00' }), null, 'unparseable stays unquoted');
 });

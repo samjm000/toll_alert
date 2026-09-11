@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { Crossing } from '../types/crossing';
+import { describeChargeableWindow } from '../config/chargeableHours';
 import { logEvent } from '../diagnostics/log';
 
 /**
@@ -171,7 +172,11 @@ export async function registerCrossingNotificationCategory(): Promise<void> {
  * this resolves can have its JS context torn down with the notification
  * never posted.
  */
-export async function presentCrossingNotification(crossing: Crossing, eventId: string): Promise<boolean> {
+export async function presentCrossingNotification(
+  crossing: Crossing,
+  eventId: string,
+  chargeable: boolean = true
+): Promise<boolean> {
   if (Platform.OS === 'web') return false;
 
   await ensureNotificationChannel();
@@ -190,12 +195,30 @@ export async function presentCrossingNotification(crossing: Crossing, eventId: s
     return false;
   }
 
-  try {
-    await Notifications.scheduleNotificationAsync({
-      content: {
+  // A free-period crossing still gets told to the user, just without the
+  // "pay this" framing or the Mark as paid action — there is nothing to mark.
+  // Staying silent would be the more elegant behaviour right up until the
+  // charging hours turn out to be wrong, at which point silence costs a £70
+  // PCN; a notification the driver can ignore costs nothing. The window is
+  // quoted so a wrong one is visible to the person best placed to catch it.
+  const window = describeChargeableWindow(crossing.chargeableHours);
+  const content = chargeable
+    ? {
         title: `${crossing.shortName} detected`,
         body: `Pay ${crossing.price.label} by ${crossing.scheme.paymentDeadlineLabel.toLowerCase()} — tap to pay, or mark as paid once you have.`,
         categoryIdentifier: CROSSING_CATEGORY_ID,
+      }
+    : {
+        title: `${crossing.shortName} detected — nothing to pay`,
+        body: window
+          ? `${crossing.shortName} only charges ${window}, so this crossing is free. Tap to check if that looks wrong.`
+          : `${crossing.shortName} is free at this time, so there's nothing to pay. Tap to check if that looks wrong.`,
+      };
+
+  try {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        ...content,
         data: { crossingId: crossing.id, eventId },
         sound: true,
         ...(Platform.OS === 'android' ? { channelId: ANDROID_CHANNEL_ID } : {}),

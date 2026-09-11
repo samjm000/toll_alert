@@ -98,6 +98,22 @@ export function isChargeableAt(
   return offsetFromStart < gracedLength;
 }
 
+/**
+ * The charging window as "06:00-22:00", or null if there isn't one.
+ *
+ * Shown to the user in the free-period notification rather than kept
+ * internal, and that is the point: these hours came from published third
+ * parties, not from the operators directly. Putting the window in front of
+ * the driver at the moment it suppresses a charge means a wrong figure gets
+ * spotted by someone who knows the road, instead of silently costing them a
+ * PCN. Cheapest possible check on data we are not certain of.
+ */
+export function describeChargeableWindow(hours: ChargeableHours | undefined): string | null {
+  if (!hours || hours.from === undefined || hours.to === undefined) return null;
+  if (toMinutes(hours.from) === null || toMinutes(hours.to) === null) return null;
+  return `${hours.from}-${hours.to}`;
+}
+
 /* ------------------------------------------------------------------ *
  * Charge periodicity
  * ------------------------------------------------------------------ */
