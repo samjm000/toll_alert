@@ -10,6 +10,7 @@ import { RootStackParamList } from '../navigation/types';
 import { geofencing } from '../geofencing';
 import { EngineStatus } from '../geofencing/types';
 import { getNotificationPermissionStatus } from '../notifications';
+import { getScheduledReminderTimes } from '../notifications/reminders';
 import { clearLog, formatLog, LogEntry, readLog } from '../diagnostics/log';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Diagnostics'>;
@@ -28,18 +29,21 @@ export function DiagnosticsScreen(_props: Props) {
   const [status, setStatus] = useState<EngineStatus | null>(null);
   const [notificationStatus, setNotificationStatus] = useState<string>('…');
   const [entries, setEntries] = useState<LogEntry[]>([]);
+  const [scheduledReminders, setScheduledReminders] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    const [engineStatus, notifications, log] = await Promise.all([
+    const [engineStatus, notifications, log, reminders] = await Promise.all([
       geofencing.getStatus().catch(() => null),
       getNotificationPermissionStatus(),
       readLog(),
+      getScheduledReminderTimes(),
     ]);
     setStatus(engineStatus);
     setNotificationStatus(notifications);
     setEntries(log);
+    setScheduledReminders(reminders);
     setLoading(false);
   }, []);
 
@@ -58,6 +62,7 @@ export function DiagnosticsScreen(_props: Props) {
         ? `Location — foreground: ${status.foregroundLocationStatus}, background: ${status.backgroundLocationStatus}, device services: ${status.locationServicesEnabled}`
         : '',
       `Notifications: ${notificationStatus}`,
+      `Unpaid reminders scheduled: ${scheduledReminders.length ? scheduledReminders.join(', ') : 'none'}`,
       '',
     ].join('\n');
     await Share.share({ message: `${header}${formatLog(entries)}` }).catch(() => {});
@@ -128,6 +133,10 @@ export function DiagnosticsScreen(_props: Props) {
             <Row label="Location — all the time" value={status?.backgroundLocationStatus ?? '—'} />
             <Row label="Device location services" value={yesNo(status?.locationServicesEnabled)} />
             <Row label="Notifications" value={notificationStatus} />
+            <Row
+              label="Unpaid reminders scheduled"
+              value={scheduledReminders.length ? scheduledReminders.join(', ') : 'none'}
+            />
           </Card>
         </View>
 

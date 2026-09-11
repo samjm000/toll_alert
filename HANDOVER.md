@@ -11,6 +11,208 @@ the ULEZ zone) and reminds the user to pay before the deadline. See
 `README.md` for the full feature/architecture rundown and
 `src/geofencing/README.md` for the geofencing engine specifically.
 
+## 2026-09-09: CONFIRMED WORKING IN A REAL-WORLD DRIVE
+
+The tester ran it on a real device on a real journey and reported it
+working. No further detail was available — no crossing name, no delay
+figure, no confirmation of whether the sound played. Recorded as-is rather
+than inflated: **detection is confirmed in the field, the latency and audio
+behaviour on real hardware are still unmeasured.**
+
+This supersedes the emulator-only status. The emulator result below is still
+the only place a *number* exists (~144s), and that number is from mock GPS on
+a stationary device, so it should not be quoted as real-world latency.
+
+Worth capturing next time a tester drives: which crossing, roughly how long
+after crossing the alert arrived, whether it made a sound, and whether
+anything fired that should not have.
+
+## BUILT 2026-09-09: repeating reminders + chargeable hours
+
+Both of the gaps recorded below are now implemented. The sections below are
+kept because they explain *why* each was missing and what was verified.
+
+### Reminders — client spec, via Rob (2026-09-09)
+
+> "Set the clock to go off 11.45pm, 4am, 8am, 12, 4pm, 8pm. And then give
+> them an option to set their own warning times so they can suit their own
+> timetable. Let it warn them continuously until they press paid."
+
+Read as 23:45 plus a four-hourly cycle from 04:00. **The "12" was taken as
+NOON**, since it sits between 8am and 4pm in his list — he wrote "12. am",
+which literally means midnight. Worth confirming with him; it is a one-line
+change in `DEFAULT_REMINDER_TIMES`.
+
+Implemented in `src/notifications/reminders.ts`:
+
+- **Repeating DAILY triggers**, not a scheduled list of dates. "Continuously"
+  rules out a finite list: that needs a rolling window topped up whenever the
+  app opens, and stops dead if the user never opens it — which is exactly the
+  user this feature exists for. A DAILY trigger repeats by itself forever
+  until cancelled.
+- **One notification per TIME SLOT, not per crossing.** Per-crossing would
+  multiply: three unpaid crossings at six times a day is eighteen
+  notifications, which trains people to swipe without reading, and on iOS
+  would collide with the 64-pending cap. Batched, the total is always exactly
+  the number of configured times.
+- The cost of batching is that a repeating notification's text is fixed when
+  scheduled, so `syncReminders` re-runs on every change to the pending set
+  (detection, mark-paid, launch) and rewrites it.
+- **Pressing paid stops them**: `markPaid` persists first, *then* resyncs —
+  resyncing before the write would reschedule against the stale set and keep
+  nagging about the crossing just paid.
+- Times are user-editable in Settings -> Reminder times (tap to remove, add
+  your own, reset). An empty list is a real choice and is respected, not
+  overwritten by the defaults.
+- Diagnostics shows what is actually scheduled, so a tester can confirm it.
+
+### Chargeable hours — `src/config/chargeableHours.ts`
+
+Pure, dependency-free, and unit-tested (9 cases) because it is the one piece
+of this that can be tested without the JSON-import problem.
+
+- Dartford, Blackwall, Silvertown: `{ from: '06:00', to: '22:00' }`. The TfL
+  pair also carry `freeOnDates: ['12-25']`.
+- ULEZ: `{ freeOnDates: ['12-25'] }` — 24/7 otherwise, which is why `from`
+  and `to` are optional.
+- **A 15-minute grace period at the closing edge only.** Detection time is
+  not crossing time: measured delivery was ~144s and Android guarantees
+  nothing, so a genuine 21:58 crossing can be detected at 22:01. The two
+  errors are not equally costly — suppressing a real charge costs a £70+ PCN,
+  alerting for a free one costs a dismissible notification — so the window
+  stays open a little longer, and the grace is deliberately NOT applied at
+  the opening edge.
+- Unparseable hours **fail open**, for the same reason.
+- `recordDetection` returns `null` when a crossing is entered outside its
+  chargeable hours: nothing recorded, nothing notified, nothing to remind
+  about. Simulated crossings bypass the check, so the demo button never looks
+  broken at 3am.
+
+**The TfL hours came from published third parties** (blackcircles.com,
+epcplc.com, minicabs.co.uk), not tfl.gov.uk directly. Re-verify before
+relying on them.
+
+### ULEZ daily charge — fixed
+
+`ChargingScheme.chargePeriod` is `'daily'` for the ULEZ and absent (meaning
+per-crossing) everywhere else, which is right for the other eight: drive
+Dartford there and back and you genuinely owe twice.
+
+`recordDetection` now suppresses a second same-day detection for a
+daily-charged scheme — no event, no notification, and critically no second
+set of repeating reminders for one £12.50.
+
+Two decisions worth knowing:
+
+- **It ignores whether the earlier detection was marked paid.** The charge is
+  the same either way, so a second entry needs no second alert regardless.
+- **Calendar day, not a rolling 24 hours** (`isSameLocalDay`), because that
+  is the unit TfL bills on. Two crossings 25 minutes apart either side of
+  midnight are two charging days and correctly produce two alerts.
+
+`hasBeenChargedToday` ignores unparseable timestamps rather than treating
+them as a match — failing towards alerting, same principle as the
+time-of-day check failing open. Both are unit-tested.
+
+### Still not done
+
+- The Subscription screen still promises 7-day renewal and lapsed reminders
+  that nothing schedules.
+- Android 12+ may deliver repeating alarms inexactly without
+  `SCHEDULE_EXACT_ALARM`. For the 23:45 "last chance before midnight" slot a
+  drift past midnight would make it useless. Not observed, not tested.
+- **None of this has run on a device.** Written and type-checked only.
+
+## NOT BUILT: payment reminders (verified 2026-09-09)
+
+**Reminders were never implemented. They were not dropped or lost.**
+Verified against the full git history, not by inspection:
+
+- `trigger: null` in every version of `src/notifications/index.ts` that has
+  ever existed, from `c2b2497` (which first introduced notifications)
+  onward.
+- `git log --all -S` finds no `timeInterval`, no
+  `SchedulableTriggerInputTypes`, no date trigger, anywhere, ever.
+- `paymentDeadlineHours` is populated for all eight schemes and declared in
+  `src/types/crossing.ts` with the comment "for reminder-scheduling
+  purposes" — and **is read by no code at all**. Dead data awaiting a
+  feature that was never written.
+- `CrossingEvent.status` is set to `'pending'` at detection and used only to
+  filter the Home screen list. Nothing acts on it over time.
+
+So the current behaviour is: **one notification, at the moment of detection,
+and never again.** A tester who swipes it away while driving — which is what
+you do while driving — is relying on memory from then on.
+
+### The same gap, user-visible, on the Subscription screen
+
+`SubscriptionScreen.tsx` tells the user, from real config values
+(`renewalReminderDaysBefore: 7`, `lapsedReminderIntervalDays: 7`):
+
+> - We'll notify you 7 days before your subscription renews
+> - If it lapses, we'll remind you every 7 days
+
+Nothing schedules either. The app promises reminders in its own UI that no
+code delivers. Whoever builds crossing reminders should decide whether these
+are in the same piece of work.
+
+## NOT BUILT: chargeable-hours awareness (verified 2026-09-09)
+
+Same class of gap as reminders, found the same way. **No time-of-day logic
+exists anywhere in the app.** `grep` for `getHours`, `freeHours`, `isFree`,
+`22:00` etc. finds nothing outside display-label strings. `Crossing.price`
+is `{ amount, currency, label }` — there is nowhere in the data model to put
+a chargeable window. `detection.ts` records `detectedAt` and never consults
+it before firing.
+
+**Three of the nine crossings are free overnight, and all three will fire
+false alerts in that window:**
+
+| Crossing | Free window | Current behaviour |
+|---|---|---|
+| Dartford | 22:00-06:00 | Alerts anyway |
+| Blackwall | 22:00-06:00 | Alerts anyway |
+| Silvertown | 22:00-06:00 | Alerts anyway |
+
+A night-shift driver crossing Dartford at 3am is woken and told to pay £3.50
+they do not owe. That is the worst kind of false positive: it teaches people
+to ignore the app. Partial mitigation only — the notification body includes
+the price label verbatim, so a 3am Dartford alert does read "Pay £3.50 (car)
+— free 22:00-06:00...", which a careful reader might catch.
+
+Sources for the TfL window (Blackwall/Silvertown charge applies 06:00-22:00
+daily, free otherwise, free all day on 25 December): blackcircles.com,
+epcplc.com, minicabs.co.uk — published sources, not TfL directly, so
+re-check against tfl.gov.uk before coding to them.
+
+There is further time-sensitivity the app cannot express: the TfL tunnels'
+peak rates are **directional** (northbound 06:00-10:00, southbound
+16:00-19:00, weekdays only). The app has no concept of direction or time, so
+its "£1.50 to £4.00" label is the best it can currently do.
+
+### Do this with the reminder work, not separately
+
+Chargeable windows, the ULEZ daily-charge collapse, and reminders all answer
+the same question — *should this detection actually produce an alert, and
+when?* — and all touch `detection.ts`. Doing them in one pass avoids
+touching that path three times. Deferred 2026-09-09 at the user's request,
+pending the client's decision on reminder frequency.
+
+### Open questions for the client before building
+
+1. How many reminders and when — anchored to the crossing, or to the
+   deadline? Deadline-anchored is more useful but needs the exact rule.
+2. Same cadence for every scheme? Dartford is midnight-the-next-day
+   (24-48h depending on crossing time); TfL tunnels and ULEZ are midnight on
+   the third day (72h). One cadence does not fit both.
+3. What happens once the deadline passes unpaid — stop silently, or switch
+   to "you may have been issued a PCN"?
+4. **ULEZ is a daily charge, not per crossing.** The engine currently fires
+   per entry (outside->inside transition, no per-day logic anywhere), so
+   driving in and out twice in a day produces two alerts for one £12.50.
+   Reminders will multiply that unless it collapses to one per day.
+5. Are the subscription reminders above in scope?
+
 ## 2026-09-09 session: FIRST CONFIRMED COLD-START DETECTION
 
 Preview build on an API 35 emulator, app force-stopped and confirmed dead

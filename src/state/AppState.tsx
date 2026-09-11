@@ -8,18 +8,22 @@ import { recordDetection } from '../geofencing/detection';
 import { Crossing, CrossingEvent } from '../types/crossing';
 import { logEvent } from '../diagnostics/log';
 import {
+  DEFAULT_REMINDER_TIMES,
   loadCrossingEvents,
   loadMonitoringEnabled,
   loadMonitoringIntent,
+  loadReminderTimes,
   markCrossingEventPaid,
   saveMonitoringEnabled,
   saveMonitoringIntent,
+  saveReminderTimes,
 } from './persistence';
 import {
   addPaidActionListener,
   ensureNotificationPermission,
   registerCrossingNotificationCategory,
 } from '../notifications';
+import { syncReminders } from '../notifications/reminders';
 
 const ONBOARDING_KEY = 'tollalert.onboardingComplete.v1';
 
@@ -59,6 +63,15 @@ interface AppState {
   monitoringLoaded: boolean;
   /** Requests location + notification permission and starts/stops the real engine. Resolves false if permission was denied. */
   setBackgroundMonitoringEnabled: (enabled: boolean) => Promise<boolean>;
+
+  /**
+   * Local clock times ("HH:MM") at which the app re-warns about anything
+   * still unpaid. Client default is 04:00/08:00/12:00/16:00/20:00/23:45; the
+   * user can replace the list entirely, and an empty list turns reminders off.
+   */
+  reminderTimes: string[];
+  /** Replaces the reminder times and immediately reschedules against them. */
+  setReminderTimes: (times: string[]) => Promise<void>;
 }
 
 const AppStateContext = createContext<AppState | undefined>(undefined);
@@ -70,6 +83,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [crossingEvents, setCrossingEvents] = useState<CrossingEvent[]>([]);
   const [backgroundMonitoringEnabled, setBackgroundMonitoringEnabledState] = useState(false);
   const [monitoringLoaded, setMonitoringLoaded] = useState(false);
+  const [reminderTimes, setReminderTimesState] = useState<string[]>(DEFAULT_REMINDER_TIMES);
 
   useEffect(() => {
     AsyncStorage.getItem(ONBOARDING_KEY)
@@ -107,6 +121,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
    */
   const recordCrossing = useCallback(async (crossing: Crossing, source: 'geofence' | 'simulated') => {
     const event = await recordDetection(crossing, source);
+    // Null means the crossing was entered outside its chargeable hours, so
+    // nothing was recorded and there is nothing to show.
+    if (!event) return;
     setCrossingEvents((prev) => [event, ...prev.filter((e) => e.id !== event.id)]);
   }, []);
 
@@ -204,7 +221,19 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     setCrossingEvents((prev) =>
       prev.map((e) => (e.id === eventId ? { ...e, status: 'paid', paidAt: new Date().toISOString() } : e))
     );
-    markCrossingEventPaid(eventId).catch(() => {});
+    // Persist first, THEN resync: syncReminders reads the stored events, so
+    // running it before the write would reschedule against the old set and
+    // keep nagging about the crossing just marked paid. Pressing paid
+    // stopping the reminders is the whole contract of the feature.
+    markCrossingEventPaid(eventId)
+      .then(() => syncReminders(MOCK_CROSSINGS_CONFIG.crossings))
+      .catch(() => {});
+  }, []);
+
+  const setReminderTimes = useCallback(async (times: string[]) => {
+    const saved = await saveReminderTimes(times);
+    setReminderTimesState(saved);
+    await syncReminders(MOCK_CROSSINGS_CONFIG.crossings);
   }, []);
 
   useEffect(() => {
@@ -227,10 +256,21 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
 
     (async () => {
-      const [storedEvents, wasEnabled] = await Promise.all([loadCrossingEvents(), loadMonitoringEnabled()]);
+      const [storedEvents, wasEnabled, storedTimes] = await Promise.all([
+        loadCrossingEvents(),
+        loadMonitoringEnabled(),
+        loadReminderTimes(),
+      ]);
       if (cancelled) return;
 
       setCrossingEvents(storedEvents);
+      setReminderTimesState(storedTimes);
+
+      // Resync on every launch. Scheduled notifications can be lost — a
+      // reinstall, a "clear data", an OS that pruned them — and the app has no
+      // way to notice except by rebuilding them against what is actually
+      // unpaid.
+      syncReminders(MOCK_CROSSINGS_CONFIG.crossings).catch(() => {});
 
       if (!wasEnabled) {
         setMonitoringLoaded(true);
@@ -312,6 +352,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       backgroundMonitoringEnabled,
       monitoringLoaded,
       setBackgroundMonitoringEnabled,
+      reminderTimes,
+      setReminderTimes,
     }),
     [
       onboardingComplete,
@@ -327,6 +369,8 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       backgroundMonitoringEnabled,
       monitoringLoaded,
       setBackgroundMonitoringEnabled,
+      reminderTimes,
+      setReminderTimes,
     ]
   );
 

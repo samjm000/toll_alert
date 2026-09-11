@@ -27,7 +27,7 @@ const CROSSING_CATEGORY_ID = 'toll-crossing';
  * successful detection. MAX importance is right here: the whole product is a
  * time-limited payment deadline.
  */
-const ANDROID_CHANNEL_ID = 'crossing-alerts-v2';
+export const ANDROID_CHANNEL_ID = 'crossing-alerts-v2';
 
 /**
  * Channels created by earlier builds, deleted on startup.
@@ -70,8 +70,8 @@ Notifications.setNotificationHandler({
 
 let channelReady = false;
 
-/** Idempotent; safe to call from a background task. */
-async function ensureAndroidChannel(): Promise<void> {
+/** Idempotent; safe to call from a background task. Exported for src/notifications/reminders.ts. */
+export async function ensureNotificationChannel(): Promise<void> {
   if (Platform.OS !== 'android' || channelReady) return;
   try {
     for (const retired of RETIRED_ANDROID_CHANNEL_IDS) {
@@ -127,7 +127,7 @@ export async function getNotificationPermissionStatus(): Promise<'granted' | 'de
  */
 export async function ensureNotificationPermission(): Promise<boolean> {
   if (Platform.OS === 'web') return false;
-  await ensureAndroidChannel();
+  await ensureNotificationChannel();
   try {
     const existing = await Notifications.getPermissionsAsync();
     if (existing.granted) return true;
@@ -151,7 +151,7 @@ export const requestNotificationPermissions = ensureNotificationPermission;
 /** Registers the "Mark as paid" notification action. Call once at app startup. */
 export async function registerCrossingNotificationCategory(): Promise<void> {
   if (Platform.OS === 'web') return;
-  await ensureAndroidChannel();
+  await ensureNotificationChannel();
   try {
     await Notifications.setNotificationCategoryAsync(CROSSING_CATEGORY_ID, [
       {
@@ -174,7 +174,7 @@ export async function registerCrossingNotificationCategory(): Promise<void> {
 export async function presentCrossingNotification(crossing: Crossing, eventId: string): Promise<boolean> {
   if (Platform.OS === 'web') return false;
 
-  await ensureAndroidChannel();
+  await ensureNotificationChannel();
 
   // Checked, never requested: this runs in a headless task on a real
   // detection, where a permission dialog cannot be shown. If it's not

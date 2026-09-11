@@ -315,6 +315,10 @@ export const MOCK_CROSSINGS_CONFIG: CrossingsConfig = {
       paymentUrl: 'https://www.gov.uk/pay-dartford-crossing-charge',
       infoUrl: 'https://www.gov.uk/pay-dartford-crossing-charge',
       scheme: DART_CHARGE_SCHEME,
+      // Free 22:00-06:00. Added 2026-09-09: the app previously had no concept
+      // of time, so a night-shift driver crossing at 3am was woken and told to
+      // pay £3.50 they did not owe.
+      chargeableHours: { from: '06:00', to: '22:00' },
       coordinatesVerified: false,
     },
     {
@@ -340,6 +344,11 @@ export const MOCK_CROSSINGS_CONFIG: CrossingsConfig = {
         operator: 'Transport for London (TfL)',
         paymentDeadlineHours: 72,
         paymentDeadlineLabel: 'Midnight 3 days after driving in the zone',
+        // £12.50 covers the whole day however many times you enter, unlike
+        // every other scheme here. Without this the app alerted on each entry
+        // — and since 2026-09-09 would also start a fresh set of repeating
+        // reminders each time — for a single charge.
+        chargePeriod: 'daily',
         fineStages: [
           { label: 'Penalty Charge Notice (PCN) issued', amount: 180, currency: 'GBP', daysUntilThreshold: 0 },
           { label: 'Reduced rate if paid within 14 days', amount: 90, currency: 'GBP', daysUntilThreshold: 14 },
@@ -350,6 +359,10 @@ export const MOCK_CROSSINGS_CONFIG: CrossingsConfig = {
       // Unlike the 8 point crossings below, ULEZ's geofence really is
       // verified — it's TfL's own published boundary data, not a
       // landmark-level guess. See src/config/ulezBoundary.ts.
+      // Charged every day of the year except Christmas Day. No daily window —
+      // the ULEZ applies 24 hours. NOTE: it is a DAILY charge, not per
+      // crossing, and the engine still fires per entry; see HANDOVER.
+      chargeableHours: { freeOnDates: ['12-25'] },
       coordinatesVerified: true,
     },
     {
@@ -393,6 +406,12 @@ export const MOCK_CROSSINGS_CONFIG: CrossingsConfig = {
       paymentUrl: 'https://tfl.gov.uk/modes/driving/silvertown-blackwall-tunnels-charge',
       infoUrl: 'https://tfl.gov.uk/modes/driving/silvertown-blackwall-tunnels-charge',
       scheme: TFL_TUNNELS_SCHEME,
+      // Charged 06:00-22:00 daily including weekends and bank holidays; free
+      // overnight and all day on Christmas Day. Sourced 2026-09-09 from
+      // published third parties (blackcircles.com, epcplc.com,
+      // minicabs.co.uk), NOT from tfl.gov.uk directly — re-verify against the
+      // authority before relying on it.
+      chargeableHours: { from: '06:00', to: '22:00', freeOnDates: ['12-25'] },
       coordinatesVerified: false,
     },
     {
@@ -435,6 +454,12 @@ export const MOCK_CROSSINGS_CONFIG: CrossingsConfig = {
       paymentUrl: 'https://tfl.gov.uk/modes/driving/silvertown-blackwall-tunnels-charge',
       infoUrl: 'https://tfl.gov.uk/modes/driving/silvertown-blackwall-tunnels-charge',
       scheme: TFL_TUNNELS_SCHEME,
+      // Charged 06:00-22:00 daily including weekends and bank holidays; free
+      // overnight and all day on Christmas Day. Sourced 2026-09-09 from
+      // published third parties (blackcircles.com, epcplc.com,
+      // minicabs.co.uk), NOT from tfl.gov.uk directly — re-verify against the
+      // authority before relying on it.
+      chargeableHours: { from: '06:00', to: '22:00', freeOnDates: ['12-25'] },
       coordinatesVerified: false,
     },
     {
