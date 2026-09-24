@@ -22,7 +22,7 @@ import { createGeofencingEngine } from './engine';
  * comment and README's "Why ULEZ is different") — one real point-in-polygon
  * check against the actual boundary data, gated by a single permanent wake
  * circle. Total regions registered on this platform: at most 8 point
- * crossings + 1 ULEZ wake circle = 9, comfortably under 20 with no
+ * crossings + 2 wake circles (ULEZ, Congestion Charge) = 10, comfortably under 20 with no
  * swapping logic needed.
  *
  * TODO (native build, needs a Mac + a real device):

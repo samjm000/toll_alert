@@ -1,20 +1,22 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '../components/Card';
+import { Flashing } from '../components/Flashing';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { StatusPill } from '../components/StatusPill';
 import { colors, radii, spacing } from '../theme';
 import { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../state/AppState';
 import { MOCK_CROSSINGS_CONFIG } from '../config/crossings';
-import { ULEZ_BOUNDARY_META } from '../config/ulezBoundary';
+import { deadlineText, useLanguage } from '../i18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CrossingDetail'>;
 
 export function CrossingDetailScreen({ route, navigation }: Props) {
   const { eventId } = route.params;
   const { crossingEvents, markPaid } = useAppState();
+  const { t, language } = useLanguage();
 
   const event = crossingEvents.find((e) => e.id === eventId);
   const crossing = event ? MOCK_CROSSINGS_CONFIG.crossings.find((c) => c.id === event.crossingId) : undefined;
@@ -22,7 +24,7 @@ export function CrossingDetailScreen({ route, navigation }: Props) {
   if (!event || !crossing) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={styles.notFound}>This reminder no longer exists.</Text>
+        <Text style={styles.notFound}>{t.detail.notFound}</Text>
       </SafeAreaView>
     );
   }
@@ -31,25 +33,36 @@ export function CrossingDetailScreen({ route, navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.content}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <View style={styles.headerRow}>
           <View style={styles.typeBadge}>
             <Text style={styles.typeBadgeText}>{crossing.type === 'point' ? '🌉' : '⬤'}</Text>
           </View>
-          <StatusPill label={isPaid ? 'Paid' : 'Unpaid'} tone={isPaid ? 'success' : 'warning'} />
+          {isPaid ? (
+            <StatusPill label={t.detail.paid} tone="success" />
+          ) : (
+            <Flashing>
+              <StatusPill label={t.detail.unpaid} tone="warning" />
+            </Flashing>
+          )}
         </View>
         <Text style={styles.title}>{crossing.name}</Text>
         <Text style={styles.subtitle}>
-          Detected {new Date(event.detectedAt).toLocaleString([], {
-            dateStyle: 'medium',
-            timeStyle: 'short',
-          })}
+          {t.detail.detected(
+            new Date(event.detectedAt).toLocaleString(language, {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+            })
+          )}
         </Text>
+        {!isPaid && <Text style={styles.avoidFines}>{t.common.avoidFines}</Text>}
 
         <Card style={styles.priceCard}>
-          <Text style={styles.priceLabel}>Charge</Text>
+          <Text style={styles.priceLabel}>{t.detail.charge}</Text>
           <Text style={styles.price}>{crossing.price.label}</Text>
-          <Text style={styles.paymentWindow}>⏱ Pay by: {crossing.scheme.paymentDeadlineLabel}</Text>
+          <Text style={styles.paymentWindow}>
+            {t.detail.payBy(language === 'en' ? crossing.scheme.paymentDeadlineLabel : deadlineText(t, crossing.scheme.paymentDeadlineLabel))}
+          </Text>
         </Card>
 
         {crossing.scheme.caveat && (
@@ -59,7 +72,7 @@ export function CrossingDetailScreen({ route, navigation }: Props) {
         )}
 
         <Card>
-          <Text style={styles.cardTitle}>If unpaid</Text>
+          <Text style={styles.cardTitle}>{t.detail.ifUnpaid}</Text>
           {crossing.scheme.fineStages.map((stage, i) => (
             <View key={i} style={styles.fineRow}>
               <Text style={styles.fineLabel}>{stage.label}</Text>
@@ -69,36 +82,37 @@ export function CrossingDetailScreen({ route, navigation }: Props) {
           ))}
         </Card>
 
-        <Text style={styles.disclaimer}>
-          Tapping "Mark as paid" only dismisses this reminder — Toll Alert does not verify
-          payment with {crossing.scheme.operator}. You're responsible for actually paying.
-        </Text>
+        <Text style={styles.disclaimer}>{t.detail.paidDisclaimer(crossing.scheme.operator)}</Text>
 
         <Text style={styles.verified}>
-          Figures verified against {crossing.scheme.operator} on{' '}
-          {new Date(crossing.scheme.verifiedAt).toLocaleDateString([], { dateStyle: 'medium' })} — rates
-          change often, confirm at the payment link before relying on this.
+          {t.detail.verified(
+            crossing.scheme.operator,
+            new Date(crossing.scheme.verifiedAt).toLocaleDateString(language, { dateStyle: 'medium' })
+          )}
         </Text>
 
-        {crossing.geofence.kind === 'polygon' && (
+        {crossing.boundarySource && (
           <Text style={styles.verified}>
-            Boundary data verified {new Date(ULEZ_BOUNDARY_META.verifiedAt).toLocaleDateString([], { dateStyle: 'medium' })}.{' '}
-            {ULEZ_BOUNDARY_META.attribution} Licensed under the {ULEZ_BOUNDARY_META.licence}.
+            {crossing.boundarySource.verifiedAt
+              ? `Boundary data verified ${new Date(crossing.boundarySource.verifiedAt).toLocaleDateString([], { dateStyle: 'medium' })}. `
+              : 'Boundary is an approximation, not yet checked against official data. '}
+            {crossing.boundarySource.attribution}
           </Text>
         )}
-      </View>
+      </ScrollView>
 
       <View style={styles.actions}>
         <PrimaryButton
-          label="Open payment site"
-          variant="secondary"
+          label={t.detail.openPayment}
+          variant={isPaid ? 'secondary' : 'primary'}
           onPress={() => Linking.openURL(crossing.paymentUrl)}
         />
+        <Text style={styles.antiScam}>🔒 {t.detail.antiScam(crossing.scheme.operator)}</Text>
         {!isPaid && (
-          <PrimaryButton label="Mark as paid" onPress={() => markPaid(event.id)} />
+          <PrimaryButton label={t.detail.markPaid} variant="secondary" onPress={() => markPaid(event.id)} />
         )}
         {isPaid && (
-          <PrimaryButton label="Back to home" variant="secondary" onPress={() => navigation.navigate('Home')} />
+          <PrimaryButton label={t.detail.backHome} variant="secondary" onPress={() => navigation.navigate('Home')} />
         )}
       </View>
     </SafeAreaView>
@@ -107,7 +121,8 @@ export function CrossingDetailScreen({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  content: { flex: 1, padding: spacing.lg, gap: spacing.md },
+  scroll: { flex: 1 },
+  content: { padding: spacing.lg, gap: spacing.md },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   typeBadge: {
     width: 44,
@@ -120,6 +135,8 @@ const styles = StyleSheet.create({
   typeBadgeText: { fontSize: 20, color: colors.primary },
   title: { fontSize: 26, fontWeight: '800', color: colors.text },
   subtitle: { fontSize: 14, color: colors.textMuted },
+  avoidFines: { fontSize: 16, fontWeight: '900', color: colors.primary, letterSpacing: 0.5 },
+  antiScam: { fontSize: 12, color: colors.textMuted, lineHeight: 17, textAlign: 'center' },
   priceCard: { gap: 4, borderLeftWidth: 4, borderLeftColor: colors.primary },
   priceLabel: { fontSize: 12, color: colors.textMuted, textTransform: 'uppercase', fontWeight: '700' },
   price: { fontSize: 24, fontWeight: '800', color: colors.text },

@@ -3,7 +3,8 @@ import { Platform } from 'react-native';
 import { Crossing, CrossingEvent } from '../types/crossing';
 import { loadCrossingEvents, loadReminderTimes } from '../state/persistence';
 import { logEvent } from '../diagnostics/log';
-import { ANDROID_CHANNEL_ID, ensureNotificationChannel, getNotificationPermissionStatus } from './index';
+import { deadlineText, LanguageCode, loadLanguage, priceText, STRINGS } from '../i18n';
+import { ANDROID_CHANNEL_ID, ensureNotificationChannel, getNotificationPermissionStatus, PAYMENT_URL_KEY } from './index';
 
 /**
  * Repeating "you still haven't paid" reminders.
@@ -51,7 +52,13 @@ async function cancelExistingReminders(): Promise<number> {
   }
 }
 
-function buildContent(pending: CrossingEvent[], crossings: Crossing[]): { title: string; body: string } {
+function buildContent(
+  pending: CrossingEvent[],
+  crossings: Crossing[],
+  language: LanguageCode
+): { title: string; body: string; paymentUrl?: string } {
+  const strings = STRINGS[language];
+  const t = strings.notifications;
   const names = pending
     .map((event) => crossings.find((c) => c.id === event.crossingId)?.shortName)
     .filter((name): name is string => Boolean(name));
@@ -62,18 +69,25 @@ function buildContent(pending: CrossingEvent[], crossings: Crossing[]): { title:
 
   if (pending.length === 1 && unique.length === 1) {
     const crossing = crossings.find((c) => c.id === pending[0].crossingId);
-    return {
-      title: `${unique[0]} still unpaid`,
-      body: crossing
-        ? `Pay ${crossing.price.label} by ${crossing.scheme.paymentDeadlineLabel.toLowerCase()}. Open Toll Alert and tap "Mark as paid" once you have.`
-        : 'Open Toll Alert to pay, then tap "Mark as paid".',
-    };
+    // `crossing` is always found here — its shortName is where `unique[0]`
+    // came from — but the guard keeps the types honest.
+    if (crossing) {
+      return {
+        title: t.reminderTitle(unique[0]),
+        body: t.reminderBody(priceText(language, crossing.price), deadlineText(strings, crossing.scheme.paymentDeadlineLabel)),
+        // One crossing owed, so a tap can go straight to its payment page.
+        paymentUrl: crossing.paymentUrl,
+      };
+    }
   }
 
-  const list = unique.length <= 2 ? unique.join(' and ') : `${unique.slice(0, -1).join(', ')} and ${unique[unique.length - 1]}`;
+  const list =
+    unique.length <= 2
+      ? unique.join(` ${t.and} `)
+      : `${unique.slice(0, -1).join(', ')} ${t.and} ${unique[unique.length - 1]}`;
   return {
-    title: `${pending.length} unpaid crossings`,
-    body: `${list} still need paying. Open Toll Alert and tap "Mark as paid" for each one you've dealt with.`,
+    title: t.reminderManyTitle(pending.length),
+    body: t.reminderManyBody(list),
   };
 }
 
@@ -121,7 +135,7 @@ export async function syncReminders(crossings: Crossing[]): Promise<void> {
       return;
     }
 
-    const content = buildContent(pending, crossings);
+    const content = buildContent(pending, crossings, await loadLanguage());
 
     for (const time of times) {
       const [hour, minute] = time.split(':').map(Number);
@@ -130,7 +144,10 @@ export async function syncReminders(crossings: Crossing[]): Promise<void> {
           content: {
             title: content.title,
             body: content.body,
-            data: { kind: REMINDER_KIND },
+            data: {
+              kind: REMINDER_KIND,
+              ...(content.paymentUrl ? { [PAYMENT_URL_KEY]: content.paymentUrl } : {}),
+            },
             sound: true,
             ...(Platform.OS === 'android' ? { channelId: ANDROID_CHANNEL_ID } : {}),
           },
