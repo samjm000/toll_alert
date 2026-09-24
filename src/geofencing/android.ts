@@ -27,8 +27,8 @@ import { createGeofencingEngine } from './engine';
  * LESS CONSTRAINED THAN iOS, BUT NOT UNLIMITED: Android's Geofencing API
  * (FusedLocationProviderClient) allows up to 100 simultaneous geofences per
  * app, vs iOS's 20. Not that it matters much here any more — this app now
- * registers at most 9 regions total (8 point crossings + 1 ULEZ wake
- * circle), all permanent, on both platforms; the old boundary-ring-swapping
+ * registers at most 10 regions total (8 point crossings + ULEZ and
+ * Congestion Charge wake circles), all permanent, on both platforms; the old boundary-ring-swapping
  * approach that used to need this headroom is gone.
  *
  * ONE TASK, NOT ONE PER CROSSING: `engine.ts` registers a single

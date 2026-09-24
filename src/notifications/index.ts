@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { Crossing } from '../types/crossing';
 import { describeChargeableWindow } from '../config/chargeableHours';
 import { logEvent } from '../diagnostics/log';
+import { deadlineText, loadLanguage, priceText, STRINGS } from '../i18n';
 
 /**
  * Local push notifications for "you've crossed — pay by [time]" alerts.
@@ -17,6 +18,16 @@ import { logEvent } from '../diagnostics/log';
  */
 
 export const PAID_ACTION_ID = 'mark-paid';
+
+/**
+ * Put in a chargeable alert's `data`: tapping the notification itself opens
+ * this — the operator's official payment page — rather than just the app.
+ * Client ask (via Rob): the alert should say "TAP TO PAY", and the link must
+ * go to the correct site so nobody gets scammed by a copycat payment website.
+ * The URL only ever comes from the crossings config, never from anything
+ * external.
+ */
+export const PAYMENT_URL_KEY = 'paymentUrl';
 const CROSSING_CATEGORY_ID = 'toll-crossing';
 
 /**
@@ -154,10 +165,11 @@ export async function registerCrossingNotificationCategory(): Promise<void> {
   if (Platform.OS === 'web') return;
   await ensureNotificationChannel();
   try {
+    const t = STRINGS[await loadLanguage()];
     await Notifications.setNotificationCategoryAsync(CROSSING_CATEGORY_ID, [
       {
         identifier: PAID_ACTION_ID,
-        buttonTitle: 'Mark as paid',
+        buttonTitle: t.notifications.markPaidAction,
         options: { opensAppToForeground: false },
       },
     ]);
@@ -201,31 +213,41 @@ export async function presentCrossingNotification(
   // charging hours turn out to be wrong, at which point silence costs a £70
   // PCN; a notification the driver can ignore costs nothing. The window is
   // quoted so a wrong one is visible to the person best placed to catch it.
+  //
+  // Written in the language the user picked (src/i18n), read from storage
+  // because this usually runs headless with no React tree.
+  const language = await loadLanguage();
+  const t = STRINGS[language].notifications;
   const window = describeChargeableWindow(crossing.chargeableHours);
   const content = chargeable
     ? {
-        title: `${crossing.shortName} detected`,
-        body: `Pay ${crossing.price.label} by ${crossing.scheme.paymentDeadlineLabel.toLowerCase()} — tap to pay, or mark as paid once you have.`,
+        title: t.detectedTitle(crossing.shortName),
+        body: t.detectedBody(
+          priceText(language, crossing.price),
+          deadlineText(STRINGS[language], crossing.scheme.paymentDeadlineLabel)
+        ),
         categoryIdentifier: CROSSING_CATEGORY_ID,
       }
     : {
-        title: `${crossing.shortName} detected — nothing to pay`,
-        body: window
-          ? `${crossing.shortName} only charges ${window}, so this crossing is free. Tap to check if that looks wrong.`
-          : `${crossing.shortName} is free at this time, so there's nothing to pay. Tap to check if that looks wrong.`,
+        title: t.freeTitle(crossing.shortName),
+        body: window ? t.freeBodyWindow(crossing.shortName, window) : t.freeBody(crossing.shortName),
       };
 
   try {
     await Notifications.scheduleNotificationAsync({
       content: {
         ...content,
-        data: { crossingId: crossing.id, eventId },
+        data: {
+          crossingId: crossing.id,
+          eventId,
+          ...(chargeable ? { [PAYMENT_URL_KEY]: crossing.paymentUrl } : {}),
+        },
         sound: true,
         ...(Platform.OS === 'android' ? { channelId: ANDROID_CHANNEL_ID } : {}),
       },
       trigger: null,
     });
-    await logEvent('info', 'notifications', `Posted "${crossing.shortName} detected"`, { eventId });
+    await logEvent('info', 'notifications', `Posted "${content.title}"`, { eventId, language });
     return true;
   } catch (e) {
     await logEvent('error', 'notifications', `scheduleNotificationAsync threw for ${crossing.shortName}`, String(e));
@@ -233,14 +255,46 @@ export async function presentCrossingNotification(
   }
 }
 
-/** Listens for the "Mark as paid" notification action and calls onPaid(eventId). Returns an unsubscribe handle. */
-export function addPaidActionListener(onPaid: (eventId: string) => void): { remove: () => void } {
+/**
+ * Listens for taps on crossing alerts. The "Mark as paid" action calls
+ * onPaid(eventId); a tap on the alert itself opens the official payment page
+ * ("TAP TO PAY"). A tap on a free-period alert or a reminder carries no
+ * payment URL and just opens the app, as before. Returns an unsubscribe
+ * handle.
+ */
+export function addPaidActionListener(
+  onPaid: (eventId: string) => void,
+  onTapToPay: (paymentUrl: string) => void
+): { remove: () => void } {
   if (Platform.OS === 'web') return { remove: () => {} };
-  const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-    const eventId = response.notification.request.content.data?.eventId as string | undefined;
+
+  const handle = (response: Notifications.NotificationResponse) => {
+    const data = response.notification.request.content.data;
+    const eventId = data?.eventId as string | undefined;
+    const paymentUrl = data?.[PAYMENT_URL_KEY] as string | undefined;
     if (response.actionIdentifier === PAID_ACTION_ID && eventId) {
       onPaid(eventId);
+    } else if (response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER && paymentUrl) {
+      onTapToPay(paymentUrl);
     }
+  };
+
+  // A tap that LAUNCHED the app (it wasn't running) can land before this
+  // listener exists, so check for one once and clear it — otherwise the
+  // commonest case, tapping the alert hours later, would just open Home.
+  try {
+    const launching = Notifications.getLastNotificationResponse();
+    if (launching) {
+      Notifications.clearLastNotificationResponse();
+      handle(launching);
+    }
+  } catch {
+    // Not fatal: the live listener below still handles taps from here on.
+  }
+
+  const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+    Notifications.clearLastNotificationResponse();
+    handle(response);
   });
   return { remove: () => subscription.remove() };
 }

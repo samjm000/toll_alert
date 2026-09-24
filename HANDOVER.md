@@ -741,3 +741,47 @@ here:
   changed in the last 12 months per the file's own notes.
 - Merseyflow's payment deadline (24h vs same-day) is disputed by at least
   one third-party source — flagged as unconfirmed in `crossings.ts`.
+
+---
+
+## 2026-09-24 — Rob's printed review (landing, onboarding, languages, Congestion Charge)
+
+Worked through Rob's annotated printouts and his "TOLL ALERT THING TO DO" list.
+
+**Done in code**
+- **Landing page** (`WelcomeScreen`): "AVOID THE TOLL FINES" in yellow; one fines card per
+  scheme (8 cards, `src/config/fineStats.ts`), rotating every 5s, each with count, total £ and
+  the fine per driver; "No barrier. No excuse." and its paragraph removed; the Dartford alert
+  preview now shown on the page permanently, with a flashing TAP TO PAY.
+- **Fines figures are advertising copy.** Every one has a source in `fineStats.ts`, but they're
+  NOT all 2025 (Rob asked for 2025 — no consistent source was reachable), several totals are our
+  own count × fine arithmetic (flagged `estimate`), and several sources are news reports of FOIs.
+  Replace with primary sources before any paid campaign.
+- **How it works**: step 2 now says reminders repeat through the day until paid (times set in
+  Settings); new step 3: the link goes to the official site so you can't be scammed; "Paid" step
+  unchanged.
+- **Disclaimer**: adds "Your phone must be in the vehicle for the alert to be received."
+- **Alerts / reminders** say "TAP TO PAY" and "AVOID THE TOLL FINES". Tapping a chargeable alert
+  (or a single-crossing reminder) now opens the operator's official payment page directly — also
+  on a cold start, via `getLastNotificationResponse`.
+- **Flashing** (`components/Flashing.tsx`): unpaid badges and TAP TO PAY prompts blink in-app.
+  System notifications cannot flash. Respects Reduce Motion.
+- **Languages** (`src/i18n`): English, French, German, Spanish, Polish, Romanian. Defaults to the
+  phone's language; picker on the landing page and in Settings. Covers onboarding, Home, crossing
+  detail, alerts and reminders. Settings/Diagnostics/Subscription and config data (fine stage
+  labels, caveats) stay English. **Translations are machine-drafted — native-speaker review
+  needed, especially the disclaimer.**
+- **Congestion Charge** added as a second zone (£18/day, £21 if paid late; Mon–Fri 07:00–18:00,
+  weekends 12:00–18:00; free 25 Dec–1 Jan; daily charge). `ChargeableHours` gained a `weekend`
+  window. **Its boundary is hand-drawn along the Inner Ring Road**
+  (`src/config/congestionChargeBoundary.ts`) — TfL's data wasn't reachable. Replace it before
+  trusting detection near the zone edge.
+- **Engine fix needed by the second zone**: leaving the Congestion Charge wake circle used to call
+  `stopFineLocationUpdates()` unconditionally, which would have silently switched off ULEZ
+  detection (its circle contains the CCZ one). Now it checks the last known fix against other
+  zones' circles first.
+- Reminder times (item 14 "clock to set your own time alerts") already existed in Settings.
+- `docs/demo-video-script.md`: shot list + prompts for the AI bedtime demo video.
+
+**Not code — for Rob/Sam**: app icon install question, proof on every bridge/tunnel (needs drives
+with Settings → Diagnostics → Share log), car-rental QR partnerships.

@@ -4,32 +4,33 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { useLanguage } from '../../i18n';
 import { colors, spacing } from '../../theme';
 import { OnboardingStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'Disclaimer'>;
 
 /**
- * PLACEHOLDER LEGAL COPY — not final.
+ * PLACEHOLDER LEGAL COPY — not final. The text lives in src/i18n/strings.ts
+ * (`disclaimer`), in every language the app offers.
  * This wording must be reviewed and signed off by a solicitor before this
- * screen ships to production. Do not treat this text as legal advice.
+ * screen ships to production, and each translation checked by a native
+ * speaker. Do not treat this text as legal advice.
+ *
+ * Client review (2026-09-24, via Rob): keep as it is, but say that the phone
+ * must be in the vehicle for the alert to be received.
  */
-const DISCLAIMER_TEXT =
-  'This app is a reminder tool, not a guarantee. Detection can fail — GPS can lose signal ' +
-  '(e.g. in tunnels), notifications can be delayed or silenced by your phone’s operating ' +
-  'system, and background processes can be stopped by the OS to save battery. You are fully ' +
-  'responsible for paying your own tolls and charges regardless of whether you receive an ' +
-  'alert from this app.';
 
 export function DisclaimerScreen({ navigation }: Props) {
+  const { t } = useLanguage();
   const [accepted, setAccepted] = useState(false);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>Before you continue</Text>
+        <Text style={styles.title}>{t.disclaimer.title}</Text>
         <Card>
-          <Text style={styles.disclaimerText}>{DISCLAIMER_TEXT}</Text>
+          <Text style={styles.disclaimerText}>{t.disclaimer.text}</Text>
         </Card>
 
         <Pressable
@@ -41,15 +42,12 @@ export function DisclaimerScreen({ navigation }: Props) {
           <View style={[styles.checkbox, accepted && styles.checkboxChecked]}>
             {accepted && <Text style={styles.checkboxMark}>✓</Text>}
           </View>
-          <Text style={styles.checkboxLabel}>
-            I understand this app is a reminder only, and that paying tolls and charges is my
-            responsibility.
-          </Text>
+          <Text style={styles.checkboxLabel}>{t.disclaimer.checkbox}</Text>
         </Pressable>
       </ScrollView>
 
       <PrimaryButton
-        label="I understand"
+        label={t.disclaimer.understand}
         disabled={!accepted}
         onPress={() => navigation.navigate('Permissions')}
       />

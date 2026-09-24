@@ -23,6 +23,7 @@ const REMINDER_TIMES_KEY = 'tollalert.reminderTimes.v1';
 const MONITORING_INTENT_KEY = 'tollalert.backgroundMonitoringIntent.v1';
 const EVENTS_KEY = 'tollalert.crossingEvents.v1';
 const INSIDE_KEY = 'tollalert.insideRegion.v1';
+const LANGUAGE_KEY = 'tollalert.language.v1';
 
 /** Keeps the stored history bounded; the UI only ever shows recent crossings. */
 const MAX_EVENTS = 100;
@@ -213,5 +214,31 @@ export async function clearInsideRegions(): Promise<void> {
     await AsyncStorage.removeItem(INSIDE_KEY);
   } catch {
     // ignore
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Language
+ * ------------------------------------------------------------------ */
+
+/**
+ * The language the user picked, as a code like "fr". Null means they never
+ * chose, and the caller falls back to the phone's own language. Stored here,
+ * not only in React state, because the crossing alert and the reminders are
+ * written from a headless background task.
+ */
+export async function loadLanguageCode(): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(LANGUAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export async function saveLanguageCode(code: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(LANGUAGE_KEY, code);
+  } catch {
+    logEvent('warn', 'persistence', 'Could not persist the language choice');
   }
 }

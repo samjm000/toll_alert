@@ -21,6 +21,19 @@ export function haversineDistanceMeters(a: LatLng, b: LatLng): number {
 }
 
 /**
+ * True if `point` is inside any of the given circles. Used to decide whether
+ * leaving one zone's wake circle may stop location updates: the Congestion
+ * Charge's circle sits entirely inside the ULEZ's, so leaving the former
+ * usually means still being inside the latter.
+ */
+export function isInsideAnyCircle(
+  point: LatLng,
+  circles: Array<{ centroid: LatLng; wakeRadiusMeters: number }>
+): boolean {
+  return circles.some((c) => haversineDistanceMeters(point, c.centroid) <= c.wakeRadiusMeters);
+}
+
+/**
  * Ray-casting point-in-polygon test against a single closed [lng, lat] ring
  * (GeoJSON winding). No hole support — nothing in this app's boundary data
  * needs it (see `isPointInAnyPolygon` for the multi-polygon case a real

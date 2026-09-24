@@ -3,32 +3,28 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { useLanguage } from '../../i18n';
 import { colors, spacing } from '../../theme';
 import { OnboardingStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'HowItWorks'>;
 
-const STEPS = [
-  {
-    title: 'It detects the crossing',
-    body: 'Toll Alert notices when you’ve crossed the bridge, tunnel, or toll road — running in the background, even with the app closed.',
-  },
-  {
-    title: 'It sends you an alert',
-    body: 'A phone notification reminds you straight away which charge applies, with a link to pay it.',
-  },
-  {
-    title: 'You tap "Paid" once you have',
-    body: 'That turns the reminder off. Toll Alert doesn’t check with Dart Charge or TfL — tapping "Paid" just tells the app you’ve paid, it doesn’t prove it.',
-  },
-];
 
+/**
+ * Steps come from src/i18n/strings.ts `howItWorks.steps`. Client review
+ * (2026-09-24, via Rob): keep "It detects the crossing" and the "Paid" step
+ * as they were; the alert step now says the reminders repeat through the day
+ * until paid; and a new step says the link goes to the official payment site,
+ * so nobody gets scammed by a copycat one.
+ */
 export function HowItWorksScreen({ navigation }: Props) {
+  const { t } = useLanguage();
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>How it works</Text>
-        {STEPS.map((step, i) => (
+        <Text style={styles.title}>{t.howItWorks.title}</Text>
+        <Text style={styles.avoidFines}>{t.common.avoidFines}</Text>
+        {t.howItWorks.steps.map((step, i) => (
           <Card key={step.title} style={styles.card}>
             <View style={styles.row}>
               <View style={styles.stepNumber}>
@@ -42,7 +38,7 @@ export function HowItWorksScreen({ navigation }: Props) {
           </Card>
         ))}
       </ScrollView>
-      <PrimaryButton label="Continue" onPress={() => navigation.navigate('Disclaimer')} />
+      <PrimaryButton label={t.howItWorks.continue} onPress={() => navigation.navigate('Disclaimer')} />
     </SafeAreaView>
   );
 }
@@ -61,6 +57,12 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: '800',
     color: colors.text,
+  },
+  avoidFines: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: colors.primary,
+    letterSpacing: 0.5,
     marginBottom: spacing.sm,
   },
   card: {

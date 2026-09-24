@@ -1,7 +1,7 @@
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { Crossing } from '../types/crossing';
-import { isPointInAnyPolygon, LatLng } from './boundary';
+import { isInsideAnyCircle, isPointInAnyPolygon, LatLng } from './boundary';
 import { recordDetection } from './detection';
 import { logEvent } from '../diagnostics/log';
 import { loadInsideRegions, saveInsideRegions } from '../state/persistence';
@@ -185,7 +185,7 @@ export function createGeofencingEngine(config: EngineConfig): GeofencingEngine {
    * region set never needs to change as the user moves — every region here
    * is genuinely permanent for the lifetime of monitoring, which is also
    * why this design doesn't come anywhere near iOS's 20-region cap (at
-   * most 8 point crossings + 1 wake circle = 9 regions, statically).
+   * most 8 point crossings + 2 wake circles (ULEZ, Congestion Charge) = 10 regions, statically).
    */
   async function registerRegions(): Promise<void> {
     const regions: Location.LocationRegion[] = [];
@@ -266,6 +266,34 @@ export function createGeofencingEngine(config: EngineConfig): GeofencingEngine {
       // It used to be swallowed by a bare `.catch(() => {})`, which made a
       // total ULEZ detection failure completely invisible.
       await logEvent('error', 'engine', 'Could not start fine location updates — ZONE DETECTION IS OFF', String(e));
+    }
+  }
+
+  /**
+   * Whether leaving `leaving`'s wake circle must NOT stop location updates,
+   * because another zone's circle still needs them.
+   *
+   * With a single zone (the ULEZ) this never came up. The Congestion Charge
+   * added a second, much smaller circle sitting entirely inside the ULEZ's —
+   * so driving out of central London exits the Congestion Charge circle
+   * while still deep inside the ULEZ one, and stopping updates there would
+   * silently switch off ULEZ detection for the rest of the drive.
+   *
+   * Uses the last known device fix. With no fix available it keeps updates
+   * running: the cost of being wrong that way is battery, the other way is a
+   * missed £180 PCN.
+   */
+  async function anotherZoneStillNeedsUpdates(leaving: Crossing): Promise<boolean> {
+    const others = state.crossings.flatMap((c) =>
+      c.id !== leaving.id && c.geofence.kind === 'polygon' ? [c.geofence] : []
+    );
+    if (others.length === 0) return false;
+    try {
+      const last = await Location.getLastKnownPositionAsync();
+      if (!last) return true;
+      return isInsideAnyCircle({ latitude: last.coords.latitude, longitude: last.coords.longitude }, others);
+    } catch {
+      return true;
     }
   }
 
@@ -353,6 +381,10 @@ export function createGeofencingEngine(config: EngineConfig): GeofencingEngine {
         // though it's also derived from the region's fixed centroid rather
         // than a device fix.
         setInside(crossing.id, false);
+        if (await anotherZoneStillNeedsUpdates(crossing)) {
+          await logEvent('info', 'engine', `Left ${crossing.shortName}'s wake circle — still inside another zone's, updates kept on`);
+          return;
+        }
         await stopFineLocationUpdates();
       }
       return;

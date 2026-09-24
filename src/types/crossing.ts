@@ -92,8 +92,9 @@ export interface ChargingScheme {
   paymentDeadlineLabel: string;
   /**
    * How often this scheme bills. Defaults to per-crossing when omitted, which
-   * is right for eight of the nine — the ULEZ is the exception, charging once
-   * per day however many times you enter.
+   * is right for the eight bridges and tunnels — the ULEZ and the Congestion
+   * Charge are the exceptions, charging once per day however many times you
+   * enter.
    */
   chargePeriod?: ChargePeriod;
   fineStages: FineStage[];
@@ -136,6 +137,13 @@ export interface Crossing {
    * checklist before this goes near a real device.
    */
   coordinatesVerified: boolean;
+  /**
+   * Where a zone's boundary came from, shown on the crossing's detail screen.
+   * `attribution` carries any licence wording the data requires; no
+   * `verifiedAt` means the boundary is an approximation that has NOT been
+   * checked against the authority's published data.
+   */
+  boundarySource?: { attribution: string; verifiedAt?: string };
 }
 
 export interface CrossingsConfig {

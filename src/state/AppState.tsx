@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 // Aliased: this module exports its own `AppState` type for the app's context.
-import { AppState as RNAppState, AppStateStatus } from 'react-native';
+import { AppState as RNAppState, AppStateStatus, Linking } from 'react-native';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { MOCK_CROSSINGS_CONFIG, MOCK_SUBSCRIPTION_CONFIG } from '../config/crossings';
 import { geofencing } from '../geofencing';
@@ -238,7 +238,11 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     registerCrossingNotificationCategory().catch(() => {});
-    const subscription = addPaidActionListener(markPaid);
+    const subscription = addPaidActionListener(markPaid, (paymentUrl) => {
+      Linking.openURL(paymentUrl).catch((e) =>
+        logEvent('error', 'notifications', 'Could not open the payment page from a notification tap', String(e))
+      );
+    });
     return () => subscription.remove();
   }, [markPaid]);
 
