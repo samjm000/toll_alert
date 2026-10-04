@@ -54,6 +54,8 @@ export interface Strings {
   stats: {
     fineEach: (amount: string) => string;
     totalMillions: (millions: string) => string;
+    /** The big number on a card that has no count, only money: "£128.4m". */
+    money: (millions: string) => string;
     /** The label under each stat's big number, keyed by FineStat.id. */
     labels: Record<string, string>;
   };
@@ -168,8 +170,9 @@ const en: Strings = {
   stats: {
     fineEach: (amount) => `Fine: ${amount} each`,
     totalMillions: (millions) => `£${millions}m+ in fines`,
+    money: (millions) => `£${millions}m`,
     labels: {
-      dartford: 'Dart Charge fines in a single month',
+      dartford: 'paid in Dart Charge fines in 2024–25 — more than the toll itself',
       ulez: 'ULEZ fines in the first six months of the London-wide zone',
       congestion: 'Congestion Charge fines in 2024',
       'tfl-tunnels': 'tunnel fines in the first four months (2025)',
@@ -336,8 +339,9 @@ const fr: Strings = {
   stats: {
     fineEach: (amount) => `Amende : ${amount} chacune`,
     totalMillions: (millions) => `plus de ${millions} M£ d’amendes`,
+    money: (millions) => `${millions} M£`,
     labels: {
-      dartford: 'amendes Dart Charge en un seul mois',
+      dartford: 'd’amendes Dart Charge payées en 2024-25 — plus que le péage lui-même',
       ulez: 'amendes ULEZ lors des six premiers mois de la zone étendue à tout Londres',
       congestion: 'amendes de péage urbain (Congestion Charge) en 2024',
       'tfl-tunnels': 'amendes des tunnels lors des quatre premiers mois (2025)',
@@ -509,8 +513,9 @@ const de: Strings = {
   stats: {
     fineEach: (amount) => `Strafe: je ${amount}`,
     totalMillions: (millions) => `über ${millions} Mio. £ an Strafen`,
+    money: (millions) => `${millions} Mio. £`,
     labels: {
-      dartford: 'Dart-Charge-Strafen in einem einzigen Monat',
+      dartford: 'an Dart-Charge-Strafen 2024–25 gezahlt — mehr als die Maut selbst',
       ulez: 'ULEZ-Strafen in den ersten sechs Monaten der Londoner Gesamtzone',
       congestion: 'Congestion-Charge-Strafen im Jahr 2024',
       'tfl-tunnels': 'Tunnel-Strafen in den ersten vier Monaten (2025)',
@@ -682,8 +687,9 @@ const es: Strings = {
   stats: {
     fineEach: (amount) => `Multa: ${amount} cada una`,
     totalMillions: (millions) => `más de ${millions} M£ en multas`,
+    money: (millions) => `${millions} M£`,
     labels: {
-      dartford: 'multas de Dart Charge en un solo mes',
+      dartford: 'pagados en multas de Dart Charge en 2024-25, más que el propio peaje',
       ulez: 'multas ULEZ en los primeros seis meses de la zona ampliada a todo Londres',
       congestion: 'multas de la Congestion Charge en 2024',
       'tfl-tunnels': 'multas de los túneles en los primeros cuatro meses (2025)',
@@ -855,8 +861,9 @@ const pl: Strings = {
   stats: {
     fineEach: (amount) => `Kara: ${amount} za każdy`,
     totalMillions: (millions) => `ponad ${millions} mln £ kar`,
+    money: (millions) => `${millions} mln £`,
     labels: {
-      dartford: 'kar Dart Charge w ciągu jednego miesiąca',
+      dartford: 'zapłacono w karach Dart Charge w latach 2024–25 — więcej niż za samą opłatę',
       ulez: 'kar ULEZ w pierwszych sześciu miesiącach strefy obejmującej cały Londyn',
       congestion: 'kar Congestion Charge w 2024 roku',
       'tfl-tunnels': 'kar za tunele w pierwszych czterech miesiącach (2025)',
@@ -1028,8 +1035,9 @@ const ro: Strings = {
   stats: {
     fineEach: (amount) => `Amendă: ${amount} fiecare`,
     totalMillions: (millions) => `peste ${millions} mil. £ în amenzi`,
+    money: (millions) => `${millions} mil. £`,
     labels: {
-      dartford: 'amenzi Dart Charge într-o singură lună',
+      dartford: 'plătite în amenzi Dart Charge în 2024–25 — mai mult decât taxa însăși',
       ulez: 'amenzi ULEZ în primele șase luni ale zonei extinse la tot Londra',
       congestion: 'amenzi Congestion Charge în 2024',
       'tfl-tunnels': 'amenzi pentru tuneluri în primele patru luni (2025)',

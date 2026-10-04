@@ -36,9 +36,13 @@ export interface FineStat {
   id: string;
   /** Crossing name for the badge — a proper noun, not translated. */
   badge: string;
-  count: number;
+  /**
+   * Number of fines. Omitted when the source publishes only the money, in
+   * which case the card leads with `totalMillions` instead.
+   */
+  count?: number;
   /** Shown after the number when the source said "more than". */
-  countIsFloor: boolean;
+  countIsFloor?: boolean;
   /** £ millions — the face value of those fines. */
   totalMillions: number;
   estimate: boolean;
@@ -51,16 +55,20 @@ export interface FineStat {
 
 export const FINE_STATS: FineStat[] = [
   {
+    // Was "500,000+ fines in a single month" (FleetNews FOI). True, but Rob
+    // spotted that it reads as wrong, and it is misleading: that month was a
+    // one-off, a backlog built up after the July 2023 change of operator
+    // being cleared during 2024-25. The audited annual figure is both more
+    // recent and harder to argue with. National Highways' accounts don't
+    // give a PCN count, so this card leads with the money instead.
     id: 'dartford',
     badge: 'DARTFORD CROSSING',
-    count: 500_000,
-    countIsFloor: true,
-    totalMillions: 35,
-    estimate: true,
-    estimateNote: '500,000 × the £70 PCN.',
+    totalMillions: 128.4,
+    estimate: false,
     fine: '£70',
-    source: 'FleetNews, FOI to National Highways',
-    sourceUrl: 'https://www.fleetnews.co.uk/news/half-a-million-dart-charge-fines-issued-in-one-month',
+    source: 'National Highways audited accounts, year to 31 March 2025',
+    sourceUrl:
+      'https://assets.publishing.service.gov.uk/media/697b77ce2ff8d10a830d5d4e/Dartford-Thurrock_River_Crossing_Charging_Scheme_Accounts_2024-25.pdf',
   },
   {
     id: 'ulez',

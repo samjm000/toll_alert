@@ -785,3 +785,10 @@ Worked through Rob's annotated printouts and his "TOLL ALERT THING TO DO" list.
 
 **Not code — for Rob/Sam**: app icon install question, proof on every bridge/tunnel (needs drives
 with Settings → Diagnostics → Share log), car-rental QR partnerships.
+
+### 2026-10-04 follow-up
+- Dartford fines card: Rob flagged "500,000 fines in a month" as looking wrong. It was a real FOI figure
+  but a one-off: the backlog after the July 2023 operator change being cleared in 2024-25. Replaced with
+  the audited figure: £128.4m in Dart Charge penalty income in 2024-25, more than the £126.5m the toll
+  raised (National Highways accounts). `FineStat.count` is now optional; a card without one leads with £.
+- Landing alert preview said "Pay £2.50"; the Dartford car charge is £3.50. Fixed.
