@@ -34,7 +34,7 @@ export function UlezIntroScreen({ navigation }: Props) {
         <View style={styles.statWrap}>
           <FineStatCard
             badge={`⚠️ ${ULEZ_STAT.badge}`}
-            number={`${formatCount(language, ULEZ_STAT.count)}${ULEZ_STAT.countIsFloor ? '+' : ''}`}
+            number={`${formatCount(language, ULEZ_STAT.count ?? 0)}${ULEZ_STAT.countIsFloor ? '+' : ''}`}
             label={t.stats.labels[ULEZ_STAT.id] ?? ''}
             fine={t.stats.fineEach(ULEZ_STAT.fine)}
             source={`Source: ${ULEZ_STAT.source}`}

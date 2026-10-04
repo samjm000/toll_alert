@@ -61,9 +61,13 @@ export function WelcomeScreen({ navigation }: Props) {
         <Animated.View style={[styles.statWrap, { opacity: fade }]}>
           <FineStatCard
             badge={`⚠️ ${stat.badge}`}
-            number={`${formatCount(language, stat.count)}${stat.countIsFloor ? '+' : ''}`}
+            number={
+              stat.count === undefined
+                ? t.stats.money(millions)
+                : `${formatCount(language, stat.count)}${stat.countIsFloor ? '+' : ''}`
+            }
             label={t.stats.labels[stat.id] ?? ''}
-            total={t.stats.totalMillions(millions)}
+            total={stat.count === undefined ? undefined : t.stats.totalMillions(millions)}
             fine={t.stats.fineEach(stat.fine)}
             source={`Source: ${stat.source}${stat.estimate ? ' · total estimated from count × fine' : ''}`}
           />
@@ -86,7 +90,7 @@ export function WelcomeScreen({ navigation }: Props) {
                 <Text style={styles.notificationTime}>{t.welcome.alertNow}</Text>
               </View>
               <Text style={styles.notificationTitle}>{t.welcome.alertTitle('Dartford Crossing')}</Text>
-              <Text style={styles.notificationBody}>{t.welcome.alertBody('£2.50')}</Text>
+              <Text style={styles.notificationBody}>{t.welcome.alertBody('£3.50')}</Text>
               <Flashing style={styles.tapToPay}>
                 <Text style={styles.tapToPayText}>{t.common.tapToPay}</Text>
               </Flashing>
