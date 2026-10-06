@@ -7,6 +7,7 @@ import { geofencing } from '../geofencing';
 import { recordDetection } from '../geofencing/detection';
 import { Crossing, CrossingEvent } from '../types/crossing';
 import { logEvent } from '../diagnostics/log';
+import { registerHeartbeat, unregisterHeartbeat } from '../diagnostics/heartbeat';
 import {
   DEFAULT_REMINDER_TIMES,
   loadCrossingEvents,
@@ -159,6 +160,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       await geofencing.start(MOCK_CROSSINGS_CONFIG.crossings, (detection) =>
         recordCrossingRef.current(detection.crossing, 'geofence')
       );
+      await registerHeartbeat();
     } finally {
       startingRef.current = false;
     }
@@ -168,6 +170,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     async (enabled: boolean): Promise<boolean> => {
       if (!enabled) {
         await geofencing.stop().catch((e) => logEvent('error', 'app', 'geofencing.stop() threw', String(e)));
+        await unregisterHeartbeat();
         await saveMonitoringIntent(false);
         await saveMonitoringEnabled(false);
         setBackgroundMonitoringEnabledState(false);

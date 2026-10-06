@@ -4,7 +4,8 @@ import { Crossing } from '../types/crossing';
 import { isInsideAnyCircle, isPointInAnyPolygon, LatLng } from './boundary';
 import { recordDetection } from './detection';
 import { logEvent } from '../diagnostics/log';
-import { loadInsideRegions, saveInsideRegions } from '../state/persistence';
+import { describeDuration } from '../diagnostics/snapshot';
+import { loadInsideRegions, saveInsideRegions, swapLastFixAt } from '../state/persistence';
 import { CrossingDetectedHandler, EngineStatus, GeofencingEngine } from './types';
 
 export interface EngineConfig {
@@ -413,10 +414,18 @@ export function createGeofencingEngine(config: EngineConfig): GeofencingEngine {
     await ensureHydrated('location update');
 
     const position: LatLng = { latitude: latest.coords.latitude, longitude: latest.coords.longitude };
+    // The gap since the previous fix is what shows a GPS dropout. Not a
+    // warning on its own: updates are distance-based (500m), so a long gap
+    // can just mean the car was stationary in traffic.
+    const fixAt = new Date(latest.timestamp || Date.now());
+    const previousFixAt = await swapLastFixAt(fixAt.toISOString());
+    const sincePrevious = previousFixAt
+      ? `, ${describeDuration(fixAt.getTime() - Date.parse(previousFixAt))} since previous fix`
+      : ', first fix recorded';
     await logEvent(
       'info',
       'location-task',
-      `Fix ${position.latitude.toFixed(4)},${position.longitude.toFixed(4)} (±${Math.round(latest.coords.accuracy ?? -1)}m)`
+      `Fix ${position.latitude.toFixed(4)},${position.longitude.toFixed(4)} (±${Math.round(latest.coords.accuracy ?? -1)}m${sincePrevious})`
     );
 
     for (const crossing of state.crossings) {
@@ -475,6 +484,23 @@ export function createGeofencingEngine(config: EngineConfig): GeofencingEngine {
   }
 
   /**
+   * Re-registers the geofences if the OS has dropped them, without touching
+   * the detection handler a running UI may have installed. Called by the
+   * background heartbeat: Android clears an app's geofences after a reboot
+   * and whenever device location is switched off, and until now nothing put
+   * them back until the user happened to open the app — every crossing in
+   * between was missed with nothing in the log to say so.
+   *
+   * Returns true if it had to re-register.
+   */
+  async function ensureRegistered(): Promise<boolean> {
+    if (await Location.hasStartedGeofencingAsync(config.geofenceTaskName)) return false;
+    await ensureHydrated('heartbeat re-register');
+    await registerRegions();
+    return true;
+  }
+
+  /**
    * What the OS actually thinks is running, as opposed to what the UI
    * believes. Surfaced in Settings → Diagnostics: "the toggle says On" and
    * "the OS is monitoring 9 regions" are different claims, and the gap
@@ -498,5 +524,5 @@ export function createGeofencingEngine(config: EngineConfig): GeofencingEngine {
     };
   }
 
-  return { requestPermissions, start, stop, getStatus };
+  return { requestPermissions, start, stop, getStatus, ensureRegistered };
 }

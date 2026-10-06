@@ -36,7 +36,9 @@ import { CONGESTION_CHARGE_BOUNDARY, CONGESTION_CHARGE_BOUNDARY_META } from './c
  *    diagnostic log at Settings -> Diagnostics, which the tester can choose
  *    to Share; that's a manual, opt-in channel, not telemetry, and it exists
  *    because the first real tester drive produced no evidence of any kind —
- *    see src/geofencing/README.md.) Rob still asks each tester directly, in
+ *    see src/geofencing/README.md. Since 2026-10-05 a tester can also opt in
+ *    to sending that log automatically to the team's Google Sheet —
+ *    src/diagnostics/upload.ts — off by default, coordinates rounded.) Rob still asks each tester directly, in
  *    plain language, whether and roughly when they got an alert. So this is
  *    a best-reasoned
  *    starting point, not a placeholder to be replaced by measured data

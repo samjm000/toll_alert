@@ -42,3 +42,6 @@ yarn-error.*
 
 # downloaded EAS build artifacts
 /build-output
+
+# Google Play service account key for eas submit — never commit
+play-service-account.json

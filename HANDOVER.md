@@ -11,6 +11,67 @@ the ULEZ zone) and reminds the user to pay before the deadline. See
 `README.md` for the full feature/architecture rundown and
 `src/geofencing/README.md` for the geofencing engine specifically.
 
+## 2026-10-05 session: Play submission pipeline + background heartbeat
+
+### Google Play: `eas submit` is set up, first upload still manual
+- `eas.json`: `production` now has `autoIncrement` (remote versionCode — it
+  is shared with `preview` builds, which is why the counter was already at
+  8), and `submit.production.android` targets the **internal** track using
+  `./play-service-account.json` (gitignored; service account
+  `eas-submit@toll-alert-publishing.iam.gserviceaccount.com`, invited in
+  Play Console with "Release apps to testing tracks").
+- Build `041fa751-1aab-433c-85e6-fc1ade5e10a1` (versionCode 9) built fine,
+  but `eas submit` failed: **"The first submission of the app needs to be
+  performed manually."** So the vc1 AAB from 2026-09-06 never actually
+  reached Play for `com.tollalert.app`. One manual upload in Play Console →
+  Internal testing unlocks `eas submit` for every release after it.
+- `node_modules` was missing on this machine, which made `eas build` fail
+  with `Failed to resolve plugin for module "expo-dev-client"` — `npm ci`
+  first.
+- `npm test` fails on Node < 22.18 with `ERR_UNKNOWN_FILE_EXTENSION ".ts"`;
+  use `node --experimental-strip-types --test src/*/*.test.ts` there. Test
+  files must use `import { type X }` for type-only imports.
+
+### Background heartbeat (src/diagnostics/heartbeat.ts)
+Olly reported a crossing that didn't fire. The log can only record what the
+OS delivers, so "the OS never woke the app" left no trace at all. Added:
+- `expo-background-task` health check every ~15 min while monitoring is on:
+  logs any change in permissions / device location / geofence registration
+  / notifications, an "Alive" line at least every 6h, and **re-registers
+  geofences if the OS dropped them** (reboot, location toggled off) via the
+  new `GeofencingEngine.ensureRegistered()`.
+- Every JS process start logs how long nothing had run before it; > 3h with
+  monitoring on is a `warn`.
+- Location-task fix lines now include the time since the previous fix.
+- Diagnostics screen runs a check on open and shows the last check time;
+  it's in the Share header too. Log cap raised 400 → 1000.
+Not yet run on a device or emulator. First build with it: `8357984d-1419-42cc-ae03-2aab8f3c54fc`
+(versionCode 10) — this, not vc9, is the one to upload to Play.
+
+### Opt-in automatic log upload (src/diagnostics/upload.ts)
+Decided later the same session: testers' logs should come back
+automatically. Settings → Diagnostics has a "Testing Toll Alert?" card —
+name field + "Send diagnostics to the Toll Alert team" toggle. **On by
+default while in testing** (`expo.extra.diagnostics.defaultEnabled: true`);
+**set it to false, or add a consent screen, before any public release** —
+Play's user-data policy requires prominent disclosure + consent before
+sending location off the device. A tester's own switch choice always wins
+over the default (`userChose`). When on, every heartbeat (and "Send now") posts new log lines to
+a Google Sheet via an Apps Script web app (`scripts/diagnostics-sheet.gs`,
+setup steps in its header). Coordinates are rounded to 2dp (~1km) on the
+way out; the on-device log keeps full precision. Upload errors are kept in
+a status record, not the log, so being offline can't flood it.
+- Config: `app.json` → `expo.extra.diagnostics.uploadUrl` / `uploadToken`.
+  With `uploadUrl` empty the card is hidden entirely — vc10 has it empty.
+- Live receiver deployed 2026-10-05 (sheet owned by samjm001; endpoint
+  verified with a GET and one test POST). First build with upload on:
+  `d0d625c4-2633-439f-8952-c29d0f5053e4` (versionCode 11) — **this is the
+  one to upload to Play**, not vc9/vc10. Changing the script later: Deploy
+  → Manage deployments → edit → New version, or the URL changes.
+- The token is in the APK, so it's a junk filter, not a secret.
+- If this goes to production, Play's Data safety form must declare
+  optional, approximate location + name collected for diagnostics.
+
 ## 2026-09-09: CONFIRMED WORKING IN A REAL-WORLD DRIVE
 
 The tester ran it on a real device on a real journey and reported it

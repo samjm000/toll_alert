@@ -54,9 +54,15 @@
           "icon": "./assets/logo-mark.png",
           "color": "#F3B815"
         }
-      ]
+      ],
+      "expo-background-task"
     ],
     "extra": {
+      "diagnostics": {
+        "uploadUrl": "https://script.google.com/macros/s/AKfycbxPdhr5Xb1GVAMlCHIBrYk-f2VHobD0BGKpTn_h65ksX1YmO-i0M51dwLQlcv4rDxA4/exec",
+        "uploadToken": "aprPjYoebqexqFoEPust0U3a",
+        "defaultEnabled": true
+      },
       "eas": {
         "projectId": "d8725cc4-820d-4898-9e31-7f0b8d4d2f8d"
       }

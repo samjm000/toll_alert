@@ -24,6 +24,7 @@ const MONITORING_INTENT_KEY = 'tollalert.backgroundMonitoringIntent.v1';
 const EVENTS_KEY = 'tollalert.crossingEvents.v1';
 const INSIDE_KEY = 'tollalert.insideRegion.v1';
 const LANGUAGE_KEY = 'tollalert.language.v1';
+const LAST_FIX_KEY = 'tollalert.lastFixAt.v1';
 
 /** Keeps the stored history bounded; the UI only ever shows recent crossings. */
 const MAX_EVENTS = 100;
@@ -206,6 +207,22 @@ export async function saveInsideRegions(map: Map<string, boolean>): Promise<void
     await AsyncStorage.setItem(INSIDE_KEY, JSON.stringify(Object.fromEntries(map)));
   } catch {
     logEvent('warn', 'persistence', 'Could not persist region inside/outside state');
+  }
+}
+
+/**
+ * When the location task last delivered a fix. Persisted rather than held in
+ * memory because consecutive fixes routinely arrive in different (headless)
+ * JS contexts, and the gap between them is exactly what a "GPS dropped out
+ * mid-zone" question needs answering.
+ */
+export async function swapLastFixAt(now: string): Promise<string | null> {
+  try {
+    const previous = await AsyncStorage.getItem(LAST_FIX_KEY);
+    await AsyncStorage.setItem(LAST_FIX_KEY, now);
+    return previous;
+  } catch {
+    return null;
   }
 }
 
