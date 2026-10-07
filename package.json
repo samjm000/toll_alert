@@ -35,7 +35,9 @@
     "build:android:dev": "npx eas-cli build --platform android --profile development",
     "build:android:preview": "npx eas-cli build --platform android --profile preview",
     "test": "node --test src/**/*.test.ts",
-    "test:emulator": "node scripts/emulator-test.mjs"
+    "test:emulator": "node scripts/emulator-test.mjs",
+    "build:ios:production": "npx eas-cli build --platform ios --profile production",
+    "submit:ios": "npx eas-cli submit --platform ios --latest"
   },
   "private": true
 }

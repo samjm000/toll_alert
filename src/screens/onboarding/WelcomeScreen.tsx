@@ -99,8 +99,7 @@ export function WelcomeScreen({ navigation }: Props) {
       </ScrollView>
 
       <SafeAreaView style={styles.footer} edges={['bottom']}>
-        <PrimaryButton label="DOWNLOAD FREE" onPress={() => navigation.navigate('UlezIntro')} />
-        <Text style={styles.footerSubtext}>Then subscribe for just £4.99 per year.</Text>
+        <PrimaryButton label="GET STARTED" onPress={() => navigation.navigate('UlezIntro')} />
       </SafeAreaView>
 
       {demoVisible && (
@@ -189,11 +188,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
     backgroundColor: colors.background,
     gap: spacing.xs,
-  },
-  footerSubtext: {
-    fontSize: 13,
-    color: colors.textMuted,
-    textAlign: 'center',
   },
   notification: {
     position: 'absolute',

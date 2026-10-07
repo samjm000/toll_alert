@@ -11,6 +11,7 @@ import { colors, gradientDark, radii, shadow, spacing } from '../theme';
 import { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../state/AppState';
 import { MOCK_CROSSINGS_CONFIG } from '../config/crossings';
+import { SHOW_DEMO_TOOLS, SUBSCRIPTIONS_ENABLED } from '../config/release';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
@@ -55,7 +56,7 @@ export function HomeScreen({ navigation }: Props) {
           </Pressable>
         </View>
 
-        {subscription.status !== 'active' && (
+        {SUBSCRIPTIONS_ENABLED && subscription.status !== 'active' && (
           <LinearGradient
             colors={gradientDark.colors}
             start={gradientDark.start}
@@ -136,20 +137,24 @@ export function HomeScreen({ navigation }: Props) {
                 ) : (
                   <>
                     <View style={styles.statusDotIdle} />
-                    <Text style={styles.statusLine}>Tracking paused — subscribe to enable</Text>
+                    <Text style={styles.statusLine}>Tracking paused — turn on monitoring in Settings</Text>
                   </>
                 )}
               </View>
-              <Pressable onPress={() => simulateCrossing(crossing.id)}>
-                <Text style={styles.devLink}>▸ Simulate crossing (demo)</Text>
-              </Pressable>
+              {SHOW_DEMO_TOOLS && (
+                <Pressable onPress={() => simulateCrossing(crossing.id)}>
+                  <Text style={styles.devLink}>▸ Simulate crossing (demo)</Text>
+                </Pressable>
+              )}
             </Card>
           ))}
         </View>
 
-        <Pressable onPress={resetOnboarding} style={styles.replayIntroButton}>
-          <Text style={styles.replayIntroText}>↺ Replay intro (demo)</Text>
-        </Pressable>
+        {SHOW_DEMO_TOOLS && (
+          <Pressable onPress={resetOnboarding} style={styles.replayIntroButton}>
+            <Text style={styles.replayIntroText}>↺ Replay intro (demo)</Text>
+          </Pressable>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

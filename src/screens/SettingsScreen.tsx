@@ -1,6 +1,7 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Constants from 'expo-constants';
+import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BackgroundLocationRationaleModal } from '../components/BackgroundLocationRationaleModal';
 import { ReminderTimePickerModal } from '../components/ReminderTimePickerModal';
@@ -10,6 +11,7 @@ import { StatusPill } from '../components/StatusPill';
 import { colors, radii, spacing } from '../theme';
 import { RootStackParamList } from '../navigation/types';
 import { MOCK_CROSSINGS_CONFIG } from '../config/crossings';
+import { PRIVACY_POLICY_URL, SHOW_DEMO_TOOLS, SUBSCRIPTIONS_ENABLED } from '../config/release';
 import { requestIgnoreBatteryOptimizations } from '../geofencing/batteryOptimization';
 import { geofencing } from '../geofencing';
 import { EngineStatus } from '../geofencing/types';
@@ -81,22 +83,20 @@ export function SettingsScreen({ navigation }: Props) {
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.title}>Settings</Text>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account</Text>
-          <Pressable onPress={() => navigation.navigate('Subscription')}>
-            <Card style={styles.permRow}>
-              <Text style={styles.permLabel}>Subscription</Text>
-              <Text style={styles.chevron}>›</Text>
-            </Card>
-          </Pressable>
-        </View>
+        {SUBSCRIPTIONS_ENABLED && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Account</Text>
+            <Pressable onPress={() => navigation.navigate('Subscription')}>
+              <Card style={styles.permRow}>
+                <Text style={styles.permLabel}>Subscription</Text>
+                <Text style={styles.chevron}>›</Text>
+              </Card>
+            </Pressable>
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Monitored crossings</Text>
-          <Text style={styles.sectionCaption}>
-            Fetched from remote config v{MOCK_CROSSINGS_CONFIG.version} (mocked in this build).
-            New crossings can be added here without an app update.
-          </Text>
           {MOCK_CROSSINGS_CONFIG.crossings.map((c) => (
             <Card key={c.id} style={styles.crossingRow}>
               <View style={styles.typeIcon}>
@@ -113,9 +113,8 @@ export function SettingsScreen({ navigation }: Props) {
             </Card>
           ))}
           <Text style={styles.sectionCaption}>
-            Toll and fine figures above are unverified field data, not final — coordinates are
-            landmark-level approximations and rates change often. See each crossing's "Verified"
-            date and src/geofencing/README.md before relying on any of this.
+            Charges and penalty figures change often. Check each crossing's "Verified" date, and
+            always confirm the amount on the operator's payment site.
           </Text>
         </View>
 
@@ -156,10 +155,8 @@ export function SettingsScreen({ navigation }: Props) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Background monitoring</Text>
           <Text style={styles.sectionCaption}>
-            Real location-based detection (src/geofencing) — separate from the "Simulate crossing"
-            demo buttons on Home. Requires the custom dev client on a real device; does nothing under
-            Expo Go or the web preview. Still unverified against real GPS — see
-            src/geofencing/README.md.
+            Uses your location in the background to notice when you cross a toll or enter the
+            ULEZ. Your location never leaves your phone.
           </Text>
           <Pressable onPress={onToggleMonitoring} disabled={togglingMonitoring || Platform.OS === 'web'}>
             <Card style={styles.permRow}>
@@ -242,31 +239,38 @@ export function SettingsScreen({ navigation }: Props) {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Legal</Text>
-          {/* PLACEHOLDER LEGAL COPY — not final, must be reviewed by a solicitor before launch. */}
+          {/* Not solicitor-reviewed yet — worth doing before relying on it. */}
           <Card>
             <Text style={styles.legalBody}>
               This app is a reminder tool, not a guarantee. You are fully responsible for paying
-              your own tolls and charges regardless of whether you receive an alert. Full terms
-              and privacy policy links go here once finalised.
+              your own tolls and charges regardless of whether you receive an alert.
             </Text>
           </Card>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Demo tools</Text>
-          <Pressable onPress={resetOnboarding}>
+          <Pressable onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}>
             <Card style={styles.permRow}>
-              <Text style={styles.permLabel}>Replay intro</Text>
-              <Text style={styles.chevron}>↺</Text>
+              <Text style={styles.permLabel}>Privacy policy</Text>
+              <Text style={styles.chevron}>›</Text>
             </Card>
           </Pressable>
-          <Text style={styles.sectionCaption}>
-            Not a real app screen — jumps back to onboarding so testers can replay it without
-            clearing storage.
-          </Text>
         </View>
 
-        <Text style={styles.version}>Toll Alert — UI mockup build</Text>
+        {SHOW_DEMO_TOOLS && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Demo tools</Text>
+            <Pressable onPress={resetOnboarding}>
+              <Card style={styles.permRow}>
+                <Text style={styles.permLabel}>Replay intro</Text>
+                <Text style={styles.chevron}>↺</Text>
+              </Card>
+            </Pressable>
+            <Text style={styles.sectionCaption}>
+              Not a real app screen — jumps back to onboarding so testers can replay it without
+              clearing storage.
+            </Text>
+          </View>
+        )}
+
+        <Text style={styles.version}>Toll Alert {Constants.expoConfig?.version}</Text>
       </ScrollView>
 
       <ReminderTimePickerModal

@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "toll_alert",
+    "name": "Toll Alert",
     "slug": "toll_alert",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "infoPlist": {
         "UIBackgroundModes": [
           "location"
@@ -15,7 +15,11 @@
         "NSLocationWhenInUseUsageDescription": "Toll Alert checks your location to detect when you've crossed the Dartford Crossing or entered the ULEZ, so it can remind you to pay.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Toll Alert needs \"Always\" location access to detect toll crossings in the background, even when the app is closed, so you don't miss a payment deadline."
       },
-      "bundleIdentifier": "com.tollalert.app"
+      "bundleIdentifier": "com.tollalert.app",
+      "icon": "./assets/icon-ios.png",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "icon": "./assets/icon.png",
@@ -54,7 +58,8 @@
           "icon": "./assets/logo-mark.png",
           "color": "#F3B815"
         }
-      ]
+      ],
+      "./plugins/withSceneDelegate"
     ],
     "extra": {
       "eas": {

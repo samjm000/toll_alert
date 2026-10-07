@@ -4,6 +4,105 @@ Read this in full before starting new work — it's the fastest way to pick up
 where the last session left off. If anything here conflicts with what you
 find in the code, trust the code and update this file.
 
+## 2026-10-07: APP STORE PREP — v1 ships FREE
+
+- **The scene-delegate crash fix below is now a config plugin**:
+  `plugins/withSceneDelegate.js`, registered in `app.json`. EAS builds run
+  prebuild from scratch (`ios/` is gitignored), so before this every store
+  build would have crashed on launch. Verified by a clean `expo prebuild` +
+  Release simulator build in a scratch copy. The plugin throws if Expo's
+  AppDelegate template changes shape, rather than silently shipping the crash.
+- **Subscriptions are off for v1** (`SUBSCRIPTIONS_ENABLED` in
+  `src/config/release.ts`). The mock purchase flow would be rejected under
+  App Review 2.1/3.1.1. Turn it on only once real StoreKit is wired up.
+- Demo controls (Simulate crossing, Replay intro, Demo tools) only show in
+  `__DEV__`. Dev-facing captions in Settings were rewritten for users.
+- `name` is now "Toll Alert" (it was `toll_alert`). iPad is off
+  (`supportsTablet: false`, so no iPad screenshots are needed). The iOS icon is
+  `assets/icon-ios.png`, an alpha-free copy of `icon.png`.
+  `usesNonExemptEncryption: false` skips the export-compliance prompt.
+- The privacy policy lives at `public/privacy.html` and is served by the
+  existing Pages workflow at https://samjm000.github.io/toll_alert/privacy.html.
+  It says nothing leaves the device. That was checked: no `fetch`, no push
+  tokens, no analytics. **Keep it true** if remote config ever arrives.
+- `eas.json` production has `autoIncrement`. Use `npm run build:ios:production`
+  and then `npm run submit:ios`.
+
+## 2026-09-23: FIRST iOS SIMULATOR LAUNCH — crashed, then fixed (not a config issue)
+
+`npx expo run:ios` on a fresh Mac mini (Xcode 27, iOS 27 simulator runtime).
+Build succeeded first try — `app.json`'s iOS block was already correct
+(bundle id, both location usage strings, `UIBackgroundModes: [location,
+fetch]`, `expo-notifications`'s `aps-environment` entitlement) and needed no
+changes. **The blocker was native, not config: the app built clean and then
+crashed on every launch**, `EXC_BREAKPOINT` in
+`_UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`, confirmed by
+three separate `.ips` crash reports in `~/Library/Logs/DiagnosticReports/`.
+
+Root cause: this iOS/Xcode combination hard-crashes any app that never
+connects a `UIScene` — not just logs a deprecation warning, which is what
+older iOS versions did with the same non-scene `AppDelegate` pattern. Expo
+57's own `ExpoAppDelegate.swift` (in `node_modules/expo/ios/AppDelegates/`)
+has scene configuration marked as a literal `// TODO`, and nothing in
+`react-native` 0.86.3's `RCTAppDelegate` implements it either — this isn't
+something this project's config broke, it's upstream Expo/RN not yet caught
+up to this SDK.
+
+**Fixed by hand-editing the generated project** (not app.json, because this
+needs actual Swift, not a plist key):
+- `ios/tollalert/SceneDelegate.swift` (new) — a `UIWindowSceneDelegate` that
+  does the window creation and `factory.startReactNative(...)` call that
+  used to live in `AppDelegate.application(_:didFinishLaunchingWithOptions:)`.
+- `ios/tollalert/AppDelegate.swift` — that method now only builds the
+  `ExpoReactNativeFactory` and stores it; window creation moved out. Added
+  `application(_:configurationForConnecting:options:)` pointing at
+  `SceneDelegate` (not `override` — it's satisfying `UIApplicationDelegate`,
+  not overriding a superclass method that doesn't exist).
+- `ios/tollalert/Info.plist` — added `UIApplicationSceneManifest` /
+  `UISceneConfigurations` naming that delegate class.
+- `ios/tollalert.xcodeproj/project.pbxproj` — this project doesn't use
+  Xcode's synchronized-folder groups, so `SceneDelegate.swift` needed
+  explicit `PBXBuildFile`/`PBXFileReference`/group/Sources-phase entries
+  added by hand (grep `SceneDelegate` to find all four).
+
+**This is all in the gitignored, regenerated `ios/` folder.** `expo
+prebuild` (or a fresh `expo run:ios` after deleting `ios/`) will wipe every
+one of these edits and reintroduce the crash. **Needs porting into a config
+plugin** (`withAppDelegate` + `withInfoPlist` mods, plus an `withXcodeProject`
+mod to add the new file) before anyone regenerates the native project —
+otherwise this regresses silently and looks like a fresh, confusing crash to
+whoever hits it next.
+
+After the fix: build succeeds, app launches and stays up (verified: no new
+crash reports, `expo-dev-launcher`'s home screen renders with Metro's green
+"connected" dot). Did not get further than that screen in this session —
+tapping through to load the JS bundle needs a real tap in the Simulator
+window (no `simctl` UI-automation or Accessibility access available in this
+environment to script it), and the on-device dev-client couldn't resolve the
+host's LAN IP (`192.168.4.57:8081`) as a `Hostname` in the device log,
+timing out repeatedly, even though `curl` from the Mac itself to that same
+address returned 200 — worth trying `localhost:8081` by hand in the
+dev-launcher's "Enter URL manually" if this recurs; may just be this
+environment's network sandboxing rather than a real per-device issue.
+
+**Background location/geofencing — the thing most likely to have an iOS gap
+— checked specifically, not assumed carried-over from Android:**
+`src/geofencing/ios.ts` and the onboarding/rationale screens already branch
+per-platform correctly (iOS's two-step "Allow While Using App" → "Change to
+Always Allow" system-prompt sequence is described accurately, separately
+from Android's settings-redirect copy), `engine.ts` already calls
+`requestForegroundPermissionsAsync()` before
+`requestBackgroundPermissionsAsync()` on both platforms, and the 8 point
+crossings + 1 ULEZ wake circle = 9 regions is well under iOS's 20-region
+cap. None of that needed a fix. **All of this is still unverified against
+real CoreLocation behavior** — the crash above blocked ever reaching the
+part of the app that arms monitoring, so the `ios.ts` module doc's original
+"implemented, never run" status still stands for the geofencing logic
+itself, only the launch blocker is new information.
+
+Next real milestone is `eas build --platform ios`, gated on Apple Developer
+account access — chase separately, it doesn't block further simulator work.
+
 ## What this project is
 
 Toll Alert: an Expo/React Native app that geofences UK toll crossings (plus
