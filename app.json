@@ -33,7 +33,7 @@
         "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
         "android.permission.POST_NOTIFICATIONS"
       ],
-      "package": "com.tollalert.app"
+      "package": "uk.co.tollalert.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
