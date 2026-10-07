@@ -1,7 +1,7 @@
 /**
  * When a crossing's charge actually applies.
  *
- * Three of the nine crossings are free overnight — Dartford, Blackwall and
+ * Three of the crossings are free overnight — Dartford, Blackwall and
  * Silvertown are all 06:00-22:00 charging — and until 2026-09-09 the app had
  * no concept of time at all, so it woke night-shift drivers at 3am to tell
  * them to pay a charge they did not owe. That is the false positive most
@@ -29,6 +29,17 @@ export interface ChargeableHours {
    * TfL's tunnels and the ULEZ are both free on Christmas Day.
    */
   freeOnDates?: string[];
+  /**
+   * A different window for Saturday and Sunday, used in place of `from`/`to`
+   * on those days. The Congestion Charge is 07:00-18:00 on weekdays but
+   * 12:00-18:00 at weekends.
+   *
+   * Bank holidays also use the weekend window for the Congestion Charge;
+   * that isn't modelled — a bank holiday gets the weekday window, which only
+   * errs towards an unneeded alert between 07:00 and 12:00, never a missed
+   * charge.
+   */
+  weekend?: { from: string; to: string };
 }
 
 /**
@@ -61,7 +72,7 @@ function monthDay(when: Date): string {
  * Whether a charge applies at `when` (the device's local time).
  *
  * Returns true when `hours` is undefined — a crossing with no declared window
- * charges around the clock, which is the case for five of the nine. Anything
+ * charges around the clock, which is the case for five of the ten. Anything
  * unparseable also returns true: failing open means an unnecessary alert,
  * failing closed means a missed fine.
  */
@@ -74,12 +85,15 @@ export function isChargeableAt(
 
   if (hours.freeOnDates?.includes(monthDay(when))) return false;
 
+  const day = when.getDay();
+  const window = hours.weekend && (day === 0 || day === 6) ? hours.weekend : hours;
+
   // No window declared: charged at every hour, and we have already cleared
   // the free-dates check above.
-  if (hours.from === undefined || hours.to === undefined) return true;
+  if (window.from === undefined || window.to === undefined) return true;
 
-  const from = toMinutes(hours.from);
-  const to = toMinutes(hours.to);
+  const from = toMinutes(window.from);
+  const to = toMinutes(window.to);
   if (from === null || to === null) return true;
 
   const now = when.getHours() * 60 + when.getMinutes();
@@ -111,7 +125,13 @@ export function isChargeableAt(
 export function describeChargeableWindow(hours: ChargeableHours | undefined): string | null {
   if (!hours || hours.from === undefined || hours.to === undefined) return null;
   if (toMinutes(hours.from) === null || toMinutes(hours.to) === null) return null;
-  return `${hours.from}-${hours.to}`;
+  const weekday = `${hours.from}-${hours.to}`;
+  if (!hours.weekend || toMinutes(hours.weekend.from) === null || toMinutes(hours.weekend.to) === null) {
+    return weekday;
+  }
+  // Numbers and day abbreviations only, so this reads the same in every
+  // language the alert is written in.
+  return `${weekday} (Sat–Sun ${hours.weekend.from}-${hours.weekend.to})`;
 }
 
 /* ------------------------------------------------------------------ *
@@ -121,11 +141,12 @@ export function describeChargeableWindow(hours: ChargeableHours | undefined): st
 /**
  * How often a scheme charges.
  *
- * Eight of the nine crossings bill **per crossing** — drive Dartford there
+ * The eight bridges and tunnels bill **per crossing** — drive Dartford there
  * and back and you owe twice, so two alerts is correct. The ULEZ bills
- * **per day**: £12.50 covers every entry between midnight and midnight, so
- * alerting on each entry means several notifications, and now several sets
- * of repeating reminders, for a single charge the user may already have paid.
+ * **per day** (as does the Congestion Charge): £12.50 covers every entry
+ * between midnight and midnight, so alerting on each entry means several
+ * notifications, and now several sets of repeating reminders, for a single
+ * charge the user may already have paid.
  */
 export type ChargePeriod = 'per-crossing' | 'daily';
 

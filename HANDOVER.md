@@ -110,6 +110,67 @@ the ULEZ zone) and reminds the user to pay before the deadline. See
 `README.md` for the full feature/architecture rundown and
 `src/geofencing/README.md` for the geofencing engine specifically.
 
+## 2026-10-05 session: Play submission pipeline + background heartbeat
+
+### Google Play: `eas submit` is set up, first upload still manual
+- `eas.json`: `production` now has `autoIncrement` (remote versionCode — it
+  is shared with `preview` builds, which is why the counter was already at
+  8), and `submit.production.android` targets the **internal** track using
+  `./play-service-account.json` (gitignored; service account
+  `eas-submit@toll-alert-publishing.iam.gserviceaccount.com`, invited in
+  Play Console with "Release apps to testing tracks").
+- Build `041fa751-1aab-433c-85e6-fc1ade5e10a1` (versionCode 9) built fine,
+  but `eas submit` failed: **"The first submission of the app needs to be
+  performed manually."** So the vc1 AAB from 2026-09-06 never actually
+  reached Play for `com.tollalert.app`. One manual upload in Play Console →
+  Internal testing unlocks `eas submit` for every release after it.
+- `node_modules` was missing on this machine, which made `eas build` fail
+  with `Failed to resolve plugin for module "expo-dev-client"` — `npm ci`
+  first.
+- `npm test` fails on Node < 22.18 with `ERR_UNKNOWN_FILE_EXTENSION ".ts"`;
+  use `node --experimental-strip-types --test src/*/*.test.ts` there. Test
+  files must use `import { type X }` for type-only imports.
+
+### Background heartbeat (src/diagnostics/heartbeat.ts)
+Olly reported a crossing that didn't fire. The log can only record what the
+OS delivers, so "the OS never woke the app" left no trace at all. Added:
+- `expo-background-task` health check every ~15 min while monitoring is on:
+  logs any change in permissions / device location / geofence registration
+  / notifications, an "Alive" line at least every 6h, and **re-registers
+  geofences if the OS dropped them** (reboot, location toggled off) via the
+  new `GeofencingEngine.ensureRegistered()`.
+- Every JS process start logs how long nothing had run before it; > 3h with
+  monitoring on is a `warn`.
+- Location-task fix lines now include the time since the previous fix.
+- Diagnostics screen runs a check on open and shows the last check time;
+  it's in the Share header too. Log cap raised 400 → 1000.
+Not yet run on a device or emulator. First build with it: `8357984d-1419-42cc-ae03-2aab8f3c54fc`
+(versionCode 10) — this, not vc9, is the one to upload to Play.
+
+### Opt-in automatic log upload (src/diagnostics/upload.ts)
+Decided later the same session: testers' logs should come back
+automatically. Settings → Diagnostics has a "Testing Toll Alert?" card —
+name field + "Send diagnostics to the Toll Alert team" toggle. **On by
+default while in testing** (`expo.extra.diagnostics.defaultEnabled: true`);
+**set it to false, or add a consent screen, before any public release** —
+Play's user-data policy requires prominent disclosure + consent before
+sending location off the device. A tester's own switch choice always wins
+over the default (`userChose`). When on, every heartbeat (and "Send now") posts new log lines to
+a Google Sheet via an Apps Script web app (`scripts/diagnostics-sheet.gs`,
+setup steps in its header). Coordinates are rounded to 2dp (~1km) on the
+way out; the on-device log keeps full precision. Upload errors are kept in
+a status record, not the log, so being offline can't flood it.
+- Config: `app.json` → `expo.extra.diagnostics.uploadUrl` / `uploadToken`.
+  With `uploadUrl` empty the card is hidden entirely — vc10 has it empty.
+- Live receiver deployed 2026-10-05 (sheet owned by samjm001; endpoint
+  verified with a GET and one test POST). First build with upload on:
+  `d0d625c4-2633-439f-8952-c29d0f5053e4` (versionCode 11) — **this is the
+  one to upload to Play**, not vc9/vc10. Changing the script later: Deploy
+  → Manage deployments → edit → New version, or the URL changes.
+- The token is in the APK, so it's a junk filter, not a secret.
+- If this goes to production, Play's Data safety form must declare
+  optional, approximate location + name collected for diagnostics.
+
 ## 2026-09-09: CONFIRMED WORKING IN A REAL-WORLD DRIVE
 
 The tester ran it on a real device on a real journey and reported it
@@ -840,3 +901,54 @@ here:
   changed in the last 12 months per the file's own notes.
 - Merseyflow's payment deadline (24h vs same-day) is disputed by at least
   one third-party source — flagged as unconfirmed in `crossings.ts`.
+
+---
+
+## 2026-09-24 — Rob's printed review (landing, onboarding, languages, Congestion Charge)
+
+Worked through Rob's annotated printouts and his "TOLL ALERT THING TO DO" list.
+
+**Done in code**
+- **Landing page** (`WelcomeScreen`): "AVOID THE TOLL FINES" in yellow; one fines card per
+  scheme (8 cards, `src/config/fineStats.ts`), rotating every 5s, each with count, total £ and
+  the fine per driver; "No barrier. No excuse." and its paragraph removed; the Dartford alert
+  preview now shown on the page permanently, with a flashing TAP TO PAY.
+- **Fines figures are advertising copy.** Every one has a source in `fineStats.ts`, but they're
+  NOT all 2025 (Rob asked for 2025 — no consistent source was reachable), several totals are our
+  own count × fine arithmetic (flagged `estimate`), and several sources are news reports of FOIs.
+  Replace with primary sources before any paid campaign.
+- **How it works**: step 2 now says reminders repeat through the day until paid (times set in
+  Settings); new step 3: the link goes to the official site so you can't be scammed; "Paid" step
+  unchanged.
+- **Disclaimer**: adds "Your phone must be in the vehicle for the alert to be received."
+- **Alerts / reminders** say "TAP TO PAY" and "AVOID THE TOLL FINES". Tapping a chargeable alert
+  (or a single-crossing reminder) now opens the operator's official payment page directly — also
+  on a cold start, via `getLastNotificationResponse`.
+- **Flashing** (`components/Flashing.tsx`): unpaid badges and TAP TO PAY prompts blink in-app.
+  System notifications cannot flash. Respects Reduce Motion.
+- **Languages** (`src/i18n`): English, French, German, Spanish, Polish, Romanian. Defaults to the
+  phone's language; picker on the landing page and in Settings. Covers onboarding, Home, crossing
+  detail, alerts and reminders. Settings/Diagnostics/Subscription and config data (fine stage
+  labels, caveats) stay English. **Translations are machine-drafted — native-speaker review
+  needed, especially the disclaimer.**
+- **Congestion Charge** added as a second zone (£18/day, £21 if paid late; Mon–Fri 07:00–18:00,
+  weekends 12:00–18:00; free 25 Dec–1 Jan; daily charge). `ChargeableHours` gained a `weekend`
+  window. **Its boundary is hand-drawn along the Inner Ring Road**
+  (`src/config/congestionChargeBoundary.ts`) — TfL's data wasn't reachable. Replace it before
+  trusting detection near the zone edge.
+- **Engine fix needed by the second zone**: leaving the Congestion Charge wake circle used to call
+  `stopFineLocationUpdates()` unconditionally, which would have silently switched off ULEZ
+  detection (its circle contains the CCZ one). Now it checks the last known fix against other
+  zones' circles first.
+- Reminder times (item 14 "clock to set your own time alerts") already existed in Settings.
+- `docs/demo-video-script.md`: shot list + prompts for the AI bedtime demo video.
+
+**Not code — for Rob/Sam**: app icon install question, proof on every bridge/tunnel (needs drives
+with Settings → Diagnostics → Share log), car-rental QR partnerships.
+
+### 2026-10-04 follow-up
+- Dartford fines card: Rob flagged "500,000 fines in a month" as looking wrong. It was a real FOI figure
+  but a one-off: the backlog after the July 2023 operator change being cleared in 2024-25. Replaced with
+  the audited figure: £128.4m in Dart Charge penalty income in 2024-25, more than the £126.5m the toll
+  raised (National Highways accounts). `FineStat.count` is now optional; a card without one leads with £.
+- Landing alert preview said "Pay £2.50"; the Dartford car charge is £3.50. Fixed.

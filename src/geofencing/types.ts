@@ -49,4 +49,6 @@ export interface GeofencingEngine {
   stop(): Promise<void>;
   /** Reads back what the OS actually has registered — for the Diagnostics screen. */
   getStatus(): Promise<EngineStatus>;
+  /** Puts the geofences back if the OS dropped them (reboot, location toggled off). True if it had to. */
+  ensureRegistered(): Promise<boolean>;
 }

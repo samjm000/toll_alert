@@ -3,6 +3,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '../components/Card';
+import { Flashing } from '../components/Flashing';
 import { Logo } from '../components/Logo';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { PulsingDot } from '../components/PulsingDot';
@@ -12,12 +13,14 @@ import { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../state/AppState';
 import { MOCK_CROSSINGS_CONFIG } from '../config/crossings';
 import { SHOW_DEMO_TOOLS, SUBSCRIPTIONS_ENABLED } from '../config/release';
+import { useLanguage } from '../i18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 export function HomeScreen({ navigation }: Props) {
   const { subscription, crossingEvents, simulateCrossing, resetOnboarding, backgroundMonitoringEnabled } =
     useAppState();
+  const { t } = useLanguage();
 
   const pendingEvents = crossingEvents.filter((e) => e.status === 'pending');
   // Reflects whether the geofencing engine is actually armed, NOT the mock
@@ -38,12 +41,10 @@ export function HomeScreen({ navigation }: Props) {
               {isLive ? (
                 <View style={styles.liveRow}>
                   <PulsingDot color={colors.success} size={7} />
-                  <Text style={styles.liveText}>
-                    Watching {MOCK_CROSSINGS_CONFIG.crossings.length} crossings
-                  </Text>
+                  <Text style={styles.liveText}>{t.home.watching(MOCK_CROSSINGS_CONFIG.crossings.length)}</Text>
                 </View>
               ) : (
-                <Text style={styles.subtitle}>Not watching — turn on background monitoring</Text>
+                <Text style={styles.subtitle}>{t.home.notWatching}</Text>
               )}
             </View>
           </View>
@@ -56,6 +57,8 @@ export function HomeScreen({ navigation }: Props) {
           </Pressable>
         </View>
 
+        <Text style={styles.avoidFines}>{t.common.avoidFines}</Text>
+
         {SUBSCRIPTIONS_ENABLED && subscription.status !== 'active' && (
           <LinearGradient
             colors={gradientDark.colors}
@@ -63,17 +66,15 @@ export function HomeScreen({ navigation }: Props) {
             end={gradientDark.end}
             style={styles.subBanner}
           >
-            <Text style={styles.subBannerBadge}>🔔 {subscription.status === 'expired' ? 'EXPIRED' : 'GET STARTED'}</Text>
+            <Text style={styles.subBannerBadge}>🔔 {subscription.status === 'expired' ? t.home.expiredBadge : t.home.getStartedBadge}</Text>
             <Text style={styles.subBannerTitle}>
-              {subscription.status === 'expired' ? 'Your subscription has expired' : 'Start your subscription'}
+              {subscription.status === 'expired' ? t.home.expiredTitle : t.home.startTitle}
             </Text>
             <Text style={styles.subBannerBody}>
-              {subscription.status === 'expired'
-                ? 'Renew to keep getting background crossing alerts.'
-                : 'Subscribe to enable background alerts for every monitored crossing.'}
+              {subscription.status === 'expired' ? t.home.expiredBody : t.home.startBody}
             </Text>
             <PrimaryButton
-              label={subscription.status === 'expired' ? 'Renew' : 'View subscription'}
+              label={subscription.status === 'expired' ? t.home.renew : t.home.viewSubscription}
               onPress={() => navigation.navigate('Subscription')}
               style={{ marginTop: spacing.sm }}
             />
@@ -82,7 +83,7 @@ export function HomeScreen({ navigation }: Props) {
 
         {pendingEvents.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Needs your attention</Text>
+            <Text style={styles.sectionTitle}>{t.home.needsAttention}</Text>
             {pendingEvents.map((event) => {
               const crossing = MOCK_CROSSINGS_CONFIG.crossings.find((c) => c.id === event.crossingId);
               if (!crossing) return null;
@@ -96,14 +97,21 @@ export function HomeScreen({ navigation }: Props) {
                       <View style={{ flex: 1 }}>
                         <Text style={styles.eventTitle}>{crossing.shortName}</Text>
                         <Text style={styles.eventSubtitle}>
-                          Crossed {new Date(event.detectedAt).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                          {t.home.crossedAt(
+                            new Date(event.detectedAt).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })
+                          )}
                         </Text>
                       </View>
-                      <StatusPill label="Unpaid" tone="warning" />
+                      <Flashing>
+                        <StatusPill label={t.home.unpaid} tone="warning" />
+                      </Flashing>
                     </View>
+                    <Flashing style={styles.tapToPay}>
+                      <Text style={styles.tapToPayText}>{t.common.tapToPay} ›</Text>
+                    </Flashing>
                   </Card>
                 </Pressable>
               );
@@ -112,7 +120,7 @@ export function HomeScreen({ navigation }: Props) {
         )}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Monitored crossings</Text>
+          <Text style={styles.sectionTitle}>{t.home.monitored}</Text>
           {MOCK_CROSSINGS_CONFIG.crossings.map((crossing) => (
             <Card key={crossing.id} style={styles.crossingCard}>
               <View style={styles.eventRow}>
@@ -124,7 +132,7 @@ export function HomeScreen({ navigation }: Props) {
                   <Text style={styles.eventSubtitle}>{crossing.price.label}</Text>
                 </View>
                 <StatusPill
-                  label={crossing.type === 'point' ? 'Point' : 'Zone'}
+                  label={crossing.type === 'point' ? t.home.point : t.home.zone}
                   tone="neutral"
                 />
               </View>
@@ -132,18 +140,18 @@ export function HomeScreen({ navigation }: Props) {
                 {isLive ? (
                   <>
                     <PulsingDot color={colors.success} size={6} />
-                    <Text style={styles.statusLine}>Live — not currently in this crossing</Text>
+                    <Text style={styles.statusLine}>{t.home.liveNotIn}</Text>
                   </>
                 ) : (
                   <>
                     <View style={styles.statusDotIdle} />
-                    <Text style={styles.statusLine}>Tracking paused — turn on monitoring in Settings</Text>
+                    <Text style={styles.statusLine}>{t.home.paused}</Text>
                   </>
                 )}
               </View>
               {SHOW_DEMO_TOOLS && (
                 <Pressable onPress={() => simulateCrossing(crossing.id)}>
-                  <Text style={styles.devLink}>▸ Simulate crossing (demo)</Text>
+                  <Text style={styles.devLink}>{t.home.simulate}</Text>
                 </Pressable>
               )}
             </Card>
@@ -152,7 +160,7 @@ export function HomeScreen({ navigation }: Props) {
 
         {SHOW_DEMO_TOOLS && (
           <Pressable onPress={resetOnboarding} style={styles.replayIntroButton}>
-            <Text style={styles.replayIntroText}>↺ Replay intro (demo)</Text>
+            <Text style={styles.replayIntroText}>{t.home.replay}</Text>
           </Pressable>
         )}
       </ScrollView>
@@ -182,6 +190,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   settingsIcon: { fontSize: 18 },
+  avoidFines: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: colors.primary,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
+  tapToPay: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.xs,
+    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.sm,
+    backgroundColor: colors.primary,
+  },
+  tapToPayText: { fontSize: 12, fontWeight: '900', color: colors.ink, letterSpacing: 0.5 },
   subBanner: { borderRadius: radii.xl, padding: spacing.lg, ...shadow.gold },
   subBannerBadge: {
     fontSize: 11,

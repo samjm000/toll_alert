@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BackgroundLocationRationaleModal } from '../components/BackgroundLocationRationaleModal';
 import { ReminderTimePickerModal } from '../components/ReminderTimePickerModal';
 import { Card } from '../components/Card';
+import { LanguageButton } from '../components/LanguagePicker';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { StatusPill } from '../components/StatusPill';
 import { colors, radii, spacing } from '../theme';
@@ -18,12 +19,14 @@ import { EngineStatus } from '../geofencing/types';
 import { getNotificationPermissionStatus } from '../notifications';
 import { useAppState } from '../state/AppState';
 import { DEFAULT_REMINDER_TIMES } from '../state/persistence';
+import { useLanguage } from '../i18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
 export function SettingsScreen({ navigation }: Props) {
   const { resetOnboarding, backgroundMonitoringEnabled, setBackgroundMonitoringEnabled, reminderTimes, setReminderTimes } =
     useAppState();
+  const { t: strings } = useLanguage();
   const [togglingMonitoring, setTogglingMonitoring] = useState(false);
   const [rationaleVisible, setRationaleVisible] = useState(false);
   const [timePickerVisible, setTimePickerVisible] = useState(false);
@@ -96,6 +99,12 @@ export function SettingsScreen({ navigation }: Props) {
         )}
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🌐 {strings.settings.language}</Text>
+          <Text style={styles.sectionCaption}>{strings.settings.languageCaption}</Text>
+          <LanguageButton />
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Monitored crossings</Text>
           {MOCK_CROSSINGS_CONFIG.crossings.map((c) => (
             <Card key={c.id} style={styles.crossingRow}>
@@ -156,7 +165,7 @@ export function SettingsScreen({ navigation }: Props) {
           <Text style={styles.sectionTitle}>Background monitoring</Text>
           <Text style={styles.sectionCaption}>
             Uses your location in the background to notice when you cross a toll or enter the
-            ULEZ. Your location never leaves your phone.
+            ULEZ.
           </Text>
           <Pressable onPress={onToggleMonitoring} disabled={togglingMonitoring || Platform.OS === 'web'}>
             <Card style={styles.permRow}>

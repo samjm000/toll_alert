@@ -1,12 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 // Aliased: this module exports its own `AppState` type for the app's context.
-import { AppState as RNAppState, AppStateStatus } from 'react-native';
+import { AppState as RNAppState, AppStateStatus, Linking } from 'react-native';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { MOCK_CROSSINGS_CONFIG, MOCK_SUBSCRIPTION_CONFIG } from '../config/crossings';
 import { geofencing } from '../geofencing';
 import { recordDetection } from '../geofencing/detection';
 import { Crossing, CrossingEvent } from '../types/crossing';
 import { logEvent } from '../diagnostics/log';
+import { registerHeartbeat, unregisterHeartbeat } from '../diagnostics/heartbeat';
 import {
   DEFAULT_REMINDER_TIMES,
   loadCrossingEvents,
@@ -159,6 +160,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       await geofencing.start(MOCK_CROSSINGS_CONFIG.crossings, (detection) =>
         recordCrossingRef.current(detection.crossing, 'geofence')
       );
+      await registerHeartbeat();
     } finally {
       startingRef.current = false;
     }
@@ -168,6 +170,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     async (enabled: boolean): Promise<boolean> => {
       if (!enabled) {
         await geofencing.stop().catch((e) => logEvent('error', 'app', 'geofencing.stop() threw', String(e)));
+        await unregisterHeartbeat();
         await saveMonitoringIntent(false);
         await saveMonitoringEnabled(false);
         setBackgroundMonitoringEnabledState(false);
@@ -238,7 +241,11 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     registerCrossingNotificationCategory().catch(() => {});
-    const subscription = addPaidActionListener(markPaid);
+    const subscription = addPaidActionListener(markPaid, (paymentUrl) => {
+      Linking.openURL(paymentUrl).catch((e) =>
+        logEvent('error', 'notifications', 'Could not open the payment page from a notification tap', String(e))
+      );
+    });
     return () => subscription.remove();
   }, [markPaid]);
 

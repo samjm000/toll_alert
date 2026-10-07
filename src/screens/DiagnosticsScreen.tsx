@@ -1,6 +1,6 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '../components/Card';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -12,6 +12,17 @@ import { EngineStatus } from '../geofencing/types';
 import { getNotificationPermissionStatus } from '../notifications';
 import { getScheduledReminderTimes } from '../notifications/reminders';
 import { clearLog, formatLog, LogEntry, readLog } from '../diagnostics/log';
+import { getHeartbeatInfo, runHealthCheck } from '../diagnostics/heartbeat';
+import {
+  isUploadConfigured,
+  loadUploadSettings,
+  loadUploadStatus,
+  saveTesterName,
+  setUploadEnabled,
+  uploadPendingLogs,
+  UploadSettings,
+  UploadStatus,
+} from '../diagnostics/upload';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Diagnostics'>;
 
@@ -23,23 +34,61 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Diagnostics'>;
  * non-technical tester can open this, read the top card, and say something
  * useful — "it says Background location: denied" — without anyone needing
  * a cable, a laptop, or `adb`. Share sends the raw log back through
- * whatever channel they already use; nothing is uploaded automatically.
+ * whatever channel they already use; testers can also opt in to sending it
+ * automatically (src/diagnostics/upload.ts).
  */
 export function DiagnosticsScreen(_props: Props) {
   const [status, setStatus] = useState<EngineStatus | null>(null);
   const [notificationStatus, setNotificationStatus] = useState<string>('…');
   const [entries, setEntries] = useState<LogEntry[]>([]);
   const [scheduledReminders, setScheduledReminders] = useState<string[]>([]);
+  const [heartbeat, setHeartbeat] = useState<{ scheduled: boolean; lastCheckAt: string | null } | null>(null);
+  const [upload, setUpload] = useState<UploadSettings | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<UploadStatus | null>(null);
+  const [nameDraft, setNameDraft] = useState('');
+  const [sending, setSending] = useState(false);
+  const uploadConfigured = isUploadConfigured();
+
+  useEffect(() => {
+    Promise.all([loadUploadSettings(), loadUploadStatus()]).then(([settings, status]) => {
+      setUpload(settings);
+      setNameDraft(settings.testerName);
+      setUploadStatus(status);
+    });
+  }, []);
+
+  const sendNow = useCallback(async () => {
+    setSending(true);
+    setUploadStatus(await uploadPendingLogs());
+    setSending(false);
+  }, []);
+
+  const toggleUpload = async () => {
+    if (!upload) return;
+    await saveTesterName(nameDraft.trim());
+    const next = await setUploadEnabled(!upload.enabled);
+    setUpload(next);
+    if (next.enabled) sendNow();
+  };
+
+  const saveName = async () => {
+    setUpload(await saveTesterName(nameDraft.trim()));
+  };
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    const [engineStatus, notifications, log, reminders] = await Promise.all([
+    // Run a check first so opening this screen also records a snapshot —
+    // and re-registers geofences the OS dropped — before showing the log.
+    await runHealthCheck('diagnostics opened');
+    const [engineStatus, notifications, log, reminders, heartbeatInfo] = await Promise.all([
       geofencing.getStatus().catch(() => null),
       getNotificationPermissionStatus(),
       readLog(),
       getScheduledReminderTimes(),
+      getHeartbeatInfo(),
     ]);
+    setHeartbeat(heartbeatInfo);
     setStatus(engineStatus);
     setNotificationStatus(notifications);
     setEntries(log);
@@ -63,6 +112,8 @@ export function DiagnosticsScreen(_props: Props) {
         : '',
       `Notifications: ${notificationStatus}`,
       `Unpaid reminders scheduled: ${scheduledReminders.length ? scheduledReminders.join(', ') : 'none'}`,
+      `Background health check scheduled: ${yesNo(heartbeat?.scheduled)} | last ran: ${heartbeat?.lastCheckAt ?? 'never'}`,
+      `Auto-send: ${upload?.enabled ? `on as "${upload.testerName}" (${upload.deviceId}), last sent ${uploadStatus?.lastSuccessAt ?? 'never'}` : 'off'}`,
       '',
     ].join('\n');
     await Share.share({ message: `${header}${formatLog(entries)}` }).catch(() => {});
@@ -95,9 +146,49 @@ export function DiagnosticsScreen(_props: Props) {
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.caption}>
-          Everything on this screen is read from the device right now. Nothing is uploaded — use Share to
-          send it back if you're asked for it.
+          Everything on this screen is read from the device right now.{' '}
+          {upload?.enabled
+            ? 'New log lines are also being sent to the Toll Alert team automatically.'
+            : 'Nothing is uploaded unless you switch on sending below — or use Share to send it yourself.'}
         </Text>
+
+        {uploadConfigured && upload ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Testing Toll Alert?</Text>
+            <Card style={styles.uploadCard}>
+              <Text style={styles.rowLabel}>Your name</Text>
+              <TextInput
+                style={styles.input}
+                value={nameDraft}
+                onChangeText={setNameDraft}
+                onEndEditing={saveName}
+                placeholder="e.g. Olly"
+                placeholderTextColor={colors.textMuted}
+                autoCapitalize="words"
+                autoCorrect={false}
+                maxLength={40}
+              />
+              <Pressable onPress={toggleUpload} style={styles.row}>
+                <Text style={[styles.rowLabel, styles.uploadToggleLabel]}>Send diagnostics to the Toll Alert team</Text>
+                <StatusPill label={upload.enabled ? 'On' : 'Off'} tone={upload.enabled ? 'success' : 'neutral'} />
+              </Pressable>
+              {upload.enabled ? (
+                <Text style={styles.caption}>
+                  {uploadStatus?.lastError
+                    ? `Last send failed (${uploadStatus.lastError}) — it will retry automatically.`
+                    : `Last sent: ${formatWhen(uploadStatus?.lastSuccessAt ?? null)}`}
+                </Text>
+              ) : null}
+            </Card>
+            <Text style={styles.caption}>
+              Sends this log about every 15 minutes while monitoring is on, so we can see why an alert didn't
+              arrive. Locations are rounded to about 1km. Switch it off any time.
+            </Text>
+            {upload.enabled ? (
+              <PrimaryButton label={sending ? 'Sending…' : 'Send now'} variant="secondary" onPress={sendNow} />
+            ) : null}
+          </View>
+        ) : null}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Is it actually working?</Text>
@@ -133,6 +224,8 @@ export function DiagnosticsScreen(_props: Props) {
             <Row label="Location — all the time" value={status?.backgroundLocationStatus ?? '—'} />
             <Row label="Device location services" value={yesNo(status?.locationServicesEnabled)} />
             <Row label="Notifications" value={notificationStatus} />
+            <Row label="Background health check" value={yesNo(heartbeat?.scheduled)} />
+            <Row label="Last health check" value={formatWhen(heartbeat?.lastCheckAt)} />
             <Row
               label="Unpaid reminders scheduled"
               value={scheduledReminders.length ? scheduledReminders.join(', ') : 'none'}
@@ -190,6 +283,13 @@ function yesNo(value: boolean | undefined): string {
   return value ? 'Yes' : 'No';
 }
 
+function formatWhen(iso: string | null | undefined): string {
+  if (iso === undefined) return '—';
+  if (!iso) return 'never';
+  const d = new Date(iso);
+  return `${d.toLocaleDateString()} ${d.toTimeString().slice(0, 5)}`;
+}
+
 function levelColor(level: LogEntry['level']) {
   if (level === 'error') return { color: colors.danger };
   if (level === 'warn') return { color: colors.warning };
@@ -231,4 +331,16 @@ const styles = StyleSheet.create({
     fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
   },
   actions: { gap: spacing.sm, borderRadius: radii.md },
+  uploadCard: { gap: spacing.sm },
+  uploadToggleLabel: { color: colors.text, fontWeight: '700' },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    color: colors.text,
+    fontSize: 15,
+    backgroundColor: colors.surfaceRaised,
+  },
 });

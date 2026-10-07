@@ -114,3 +114,25 @@ test('describeChargeableWindow returns null when there is no window to quote', (
   assert.equal(describeChargeableWindow({ freeOnDates: ['12-25'] }), null, 'free dates but no window');
   assert.equal(describeChargeableWindow({ from: '6am', to: '22:00' }), null, 'unparseable stays unquoted');
 });
+
+test('weekend window — the Congestion Charge is 07:00-18:00 weekdays, 12:00-18:00 weekends', () => {
+  const cc = { from: '07:00', to: '18:00', weekend: { from: '12:00', to: '18:00' } };
+  // 2026-09-23 is a Wednesday; 2026-09-26 a Saturday; 2026-09-27 a Sunday.
+  const wed = (h: number, m = 0) => new Date(2026, 8, 23, h, m);
+  const sat = (h: number, m = 0) => new Date(2026, 8, 26, h, m);
+  const sun = (h: number, m = 0) => new Date(2026, 8, 27, h, m);
+
+  assert.equal(isChargeableAt(cc, wed(9)), true, 'weekday morning is charged');
+  assert.equal(isChargeableAt(cc, sat(9)), false, 'weekend morning is free');
+  assert.equal(isChargeableAt(cc, sun(9)), false, 'Sunday morning is free too');
+  assert.equal(isChargeableAt(cc, sat(12, 30)), true, 'weekend afternoon is charged');
+  assert.equal(isChargeableAt(cc, sat(18, 10)), true, 'grace still applies after the weekend window closes');
+  assert.equal(isChargeableAt(cc, wed(6, 55)), false, 'no grace at the opening edge');
+});
+
+test('describeChargeableWindow quotes the weekend window too', () => {
+  assert.equal(
+    describeChargeableWindow({ from: '07:00', to: '18:00', weekend: { from: '12:00', to: '18:00' } }),
+    '07:00-18:00 (Sat–Sun 12:00-18:00)'
+  );
+});

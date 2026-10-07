@@ -28,9 +28,11 @@ const LOG_KEY = 'tollalert.diagnosticLog.v1';
 /**
  * Deliberately bounded. A device left running for weeks would otherwise
  * grow this without limit, and the oldest entries are the least useful —
- * the tester question is always "what happened on today's drive".
+ * the tester question is always "what happened on today's drive". Raised
+ * from 400 when the background heartbeat (heartbeat.ts) started adding
+ * entries of its own, so a few days of those can't push a drive out.
  */
-const MAX_ENTRIES = 400;
+const MAX_ENTRIES = 1000;
 
 export type LogLevel = 'info' | 'warn' | 'error';
 
@@ -47,6 +49,22 @@ export interface LogEntry {
  * entries — exactly the kind of hole this module exists to close.
  */
 let writeQueue: Promise<void> = Promise.resolve();
+
+/**
+ * Timestamp of the newest entry written by an EARLIER process — i.e. the
+ * last moment anything in this app ran before this JS context started.
+ * Read once at module load and chained ahead of every write, so no entry
+ * from this process can sneak in first and make a 9-hour silence look like
+ * 0 seconds. heartbeat.ts turns it into the "app was dead for Xh" line.
+ */
+const previousSessionLastEntryAt: Promise<string | null> = readRaw().then((entries) =>
+  entries.length ? entries[entries.length - 1].at : null
+);
+writeQueue = previousSessionLastEntryAt.then(() => undefined);
+
+export function getPreviousSessionLastEntryAt(): Promise<string | null> {
+  return previousSessionLastEntryAt;
+}
 
 async function readRaw(): Promise<LogEntry[]> {
   try {

@@ -7,6 +7,7 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { colors, spacing } from '../../theme';
 import { OnboardingStackParamList } from '../../navigation/types';
 import { useAppState } from '../../state/AppState';
+import { Segment, useLanguage } from '../../i18n';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'Permissions'>;
 
@@ -43,52 +44,33 @@ function Step({ number, children, isLast }: { number: number; children: React.Re
  * shows them. Written as discrete numbered actions rather than a paragraph
  * because a non-technical tester has to follow them while system dialogs are
  * covering the screen — and because step 2 on Android is the one people miss.
- *
- * A function rather than a module-level const: these read `styles`, which is
- * initialised at the bottom of the file, so evaluating them at module load
- * would hit the temporal dead zone.
+ * The wording is in src/i18n/strings.ts (`permissions.iosSteps` /
+ * `androidSteps`); bold segments are the OS's own button names.
  *
  * Android 11+ does NOT show a dialog for background location:
  * expo-location's `requestBackgroundPermissionsAsync` opens the system
  * settings page instead. Describing that as a prompt sends the user looking
  * for a popup that never appears.
  */
-function getSteps(): React.ReactNode[] {
-  return Platform.OS === 'ios'
-    ? [
-        <>
-          Tap <Text style={styles.bold}>"Allow While Using App"</Text> on the location prompt.
-        </>,
-        <>
-          iOS will ask a second time — choose{' '}
-          <Text style={styles.bold}>"Change to Always Allow"</Text>.
-        </>,
-        <>
-          Tap <Text style={styles.bold}>Allow</Text> on the notifications prompt. That's how the
-          alert actually reaches you.
-        </>,
-      ]
-    : [
-        <>
-          Tap <Text style={styles.bold}>"While using the app"</Text> on the location popup.
-        </>,
-        <>
-          Android then opens your <Text style={styles.bold}>Settings page</Text>, not another
-          popup. Go to <Text style={styles.bold}>Permissions → Location</Text>, choose{' '}
-          <Text style={styles.bold}>"Allow all the time"</Text>, then come back here — Toll Alert
-          will switch itself on.
-        </>,
-        <>
-          Tap <Text style={styles.bold}>Allow</Text> on the notifications prompt. That's how the
-          alert actually reaches you.
-        </>,
-      ];
+function renderSteps(steps: Segment[][]): React.ReactNode[] {
+  return steps.map((segments) =>
+    segments.map((segment, i) =>
+      segment.bold ? (
+        <Text key={i} style={styles.bold}>
+          {segment.text}
+        </Text>
+      ) : (
+        segment.text
+      )
+    )
+  );
 }
 
 export function PermissionsScreen(_props: Props) {
   const { completeOnboarding, setBackgroundMonitoringEnabled } = useAppState();
   const [working, setWorking] = useState(false);
-  const steps = getSteps();
+  const { t } = useLanguage();
+  const steps = renderSteps(Platform.OS === 'ios' ? t.permissions.iosSteps : t.permissions.androidSteps);
 
   const enableThenContinue = async () => {
     setWorking(true);
@@ -104,11 +86,9 @@ export function PermissionsScreen(_props: Props) {
         // back, which is why this wording asks them to finish rather than
         // telling them they denied it.
         Alert.alert(
-          Platform.OS === 'android' ? 'One step left' : 'Alerts are off',
-          Platform.OS === 'android'
-            ? 'If your phone opened its Settings page, choose Permissions → Location → "Allow all the time", then come back here — Toll Alert will switch itself on. Without it, a crossing can\'t be spotted while the app is closed. You can check it worked under Settings → Diagnostics.'
-            : 'Toll Alert needs "Always" location access to spot a crossing while the app is closed. You can grant it any time from Settings → Background monitoring.',
-          [{ text: 'OK', onPress: completeOnboarding }]
+          Platform.OS === 'android' ? t.permissions.androidAlertTitle : t.permissions.iosAlertTitle,
+          Platform.OS === 'android' ? t.permissions.androidAlertBody : t.permissions.iosAlertBody,
+          [{ text: t.permissions.ok, onPress: completeOnboarding }]
         );
         return;
       }
@@ -121,35 +101,26 @@ export function PermissionsScreen(_props: Props) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.content}>
-        <Text style={styles.title}>One last thing</Text>
-        <Text style={styles.body}>
-          To detect crossings while your phone is in your pocket, Toll Alert needs to check your
-          location in the background — including when the app is closed.
-        </Text>
+        <Text style={styles.title}>{t.permissions.title}</Text>
+        <Text style={styles.body}>{t.permissions.body}</Text>
         <Card>
-          <Text style={styles.cardTitle}>What happens next</Text>
+          <Text style={styles.cardTitle}>{t.permissions.cardTitle}</Text>
           {steps.map((step, index) => (
             <Step key={index} number={index + 1} isLast={index === steps.length - 1}>
               {step}
             </Step>
           ))}
-          <Text style={styles.cardFootnote}>
-            Toll Alert only uses this to detect the crossings in your list. It doesn't track or
-            store your route.
-          </Text>
+          <Text style={styles.cardFootnote}>{t.permissions.footnote}</Text>
         </Card>
       </View>
       <View style={styles.actions}>
-        <Text style={styles.note}>
-          Without background location and notifications, a crossing detected while the app is closed
-          can't reach you. You can change either later in Settings.
-        </Text>
+        <Text style={styles.note}>{t.permissions.note}</Text>
         <PrimaryButton
-          label={working ? 'Setting up…' : 'Turn on crossing alerts'}
+          label={working ? t.permissions.settingUp : t.permissions.turnOn}
           onPress={enableThenContinue}
           disabled={working}
         />
-        <PrimaryButton label="Not now" variant="secondary" onPress={completeOnboarding} disabled={working} />
+        <PrimaryButton label={t.permissions.notNow} variant="secondary" onPress={completeOnboarding} disabled={working} />
       </View>
     </SafeAreaView>
   );

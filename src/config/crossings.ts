@@ -1,5 +1,6 @@
 import { ChargingScheme, CrossingsConfig } from '../types/crossing';
 import { ULEZ_BOUNDARY, ULEZ_BOUNDARY_META } from './ulezBoundary';
+import { CONGESTION_CHARGE_BOUNDARY, CONGESTION_CHARGE_BOUNDARY_META } from './congestionChargeBoundary';
 
 /**
  * MOCK remote config — stands in for the server-hosted JSON endpoint the
@@ -35,7 +36,9 @@ import { ULEZ_BOUNDARY, ULEZ_BOUNDARY_META } from './ulezBoundary';
  *    diagnostic log at Settings -> Diagnostics, which the tester can choose
  *    to Share; that's a manual, opt-in channel, not telemetry, and it exists
  *    because the first real tester drive produced no evidence of any kind —
- *    see src/geofencing/README.md.) Rob still asks each tester directly, in
+ *    see src/geofencing/README.md. Since 2026-10-05 a tester can also opt in
+ *    to sending that log automatically to the team's Google Sheet —
+ *    src/diagnostics/upload.ts — off by default, coordinates rounded.) Rob still asks each tester directly, in
  *    plain language, whether and roughly when they got an alert. So this is
  *    a best-reasoned
  *    starting point, not a placeholder to be replaced by measured data
@@ -364,6 +367,74 @@ export const MOCK_CROSSINGS_CONFIG: CrossingsConfig = {
       // crossing, and the engine still fires per entry; see HANDOVER.
       chargeableHours: { freeOnDates: ['12-25'] },
       coordinatesVerified: true,
+      boundarySource: {
+        attribution: `${ULEZ_BOUNDARY_META.attribution} Licensed under the ${ULEZ_BOUNDARY_META.licence}.`,
+        verifiedAt: ULEZ_BOUNDARY_META.verifiedAt,
+      },
+    },
+    {
+      // Added 2026-09-24 at the client's request. Detected exactly like the
+      // ULEZ (wake circle + point-in-polygon), but its boundary is an
+      // APPROXIMATION, not TfL's data — read
+      // src/config/congestionChargeBoundary.ts before trusting edge cases.
+      id: 'congestion-charge',
+      name: 'Congestion Charge (central London)',
+      shortName: 'Congestion Charge',
+      type: 'zone',
+      geofence: {
+        kind: 'polygon',
+        centroid: CONGESTION_CHARGE_BOUNDARY.centroid,
+        polygons: CONGESTION_CHARGE_BOUNDARY.polygons,
+        wakeRadiusMeters: CONGESTION_CHARGE_BOUNDARY.wakeRadiusMeters,
+      },
+      price: {
+        amount: 18,
+        currency: 'GBP',
+        // £18 if paid by midnight on the day of travel; £21 if paid in the
+        // three days after. Quoting both in the alert is the point — paying
+        // the same day saves £3.
+        label: '£18 per day (£21 if paid after the day of travel)',
+      },
+      paymentUrl: 'https://tfl.gov.uk/modes/driving/congestion-charge',
+      infoUrl: 'https://tfl.gov.uk/modes/driving/congestion-charge',
+      scheme: {
+        id: 'tfl-congestion-charge',
+        operator: 'Transport for London (TfL)',
+        paymentDeadlineHours: 72,
+        paymentDeadlineLabel: 'Midnight 3 days after driving in the zone',
+        // One charge covers the whole day, however many times you enter —
+        // same as the ULEZ.
+        chargePeriod: 'daily',
+        fineStages: [
+          { label: 'Penalty Charge Notice (PCN) issued', amount: 180, currency: 'GBP', daysUntilThreshold: 0 },
+          { label: 'Reduced rate if paid within 14 days', amount: 90, currency: 'GBP', daysUntilThreshold: 14 },
+          { label: 'Charge certificate if unpaid after 28 days', amount: 270, currency: 'GBP', daysUntilThreshold: 28 },
+        ],
+        sourceUrl: 'https://tfl.gov.uk/modes/driving/congestion-charge',
+        // Checked against secondary sources (Parkers, Visit London, 2026
+        // guides) — tfl.gov.uk itself was not reachable. Re-verify there.
+        verifiedAt: '2026-09-24',
+        caveat:
+          'The zone boundary used to detect this is an approximation, not TfL’s official map — near the ' +
+          'edge of the zone, check TfL’s map before paying. Electric vehicles pay £13.50 rather than £18, and ' +
+          'many vehicles (e.g. Blue Badge holders who have registered) are exempt.',
+      },
+      // Mon-Fri 07:00-18:00, Sat/Sun and bank holidays 12:00-18:00 (bank
+      // holidays not modelled — see ChargeableHours.weekend). No charge
+      // between Christmas Day and the New Year's Day bank holiday inclusive;
+      // 25 Dec - 1 Jan is listed, and a New Year's Day bank holiday that
+      // falls on 2 or 3 Jan errs towards an unneeded alert.
+      chargeableHours: {
+        from: '07:00',
+        to: '18:00',
+        weekend: { from: '12:00', to: '18:00' },
+        freeOnDates: ['12-25', '12-26', '12-27', '12-28', '12-29', '12-30', '12-31', '01-01'],
+      },
+      coordinatesVerified: false,
+      boundarySource: {
+        attribution: CONGESTION_CHARGE_BOUNDARY_META.attribution,
+        verifiedAt: CONGESTION_CHARGE_BOUNDARY_META.verifiedAt,
+      },
     },
     {
       id: 'blackwall-tunnel',

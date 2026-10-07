@@ -1,10 +1,11 @@
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { Crossing } from '../types/crossing';
-import { isPointInAnyPolygon, LatLng } from './boundary';
+import { isInsideAnyCircle, isPointInAnyPolygon, LatLng } from './boundary';
 import { recordDetection } from './detection';
 import { logEvent } from '../diagnostics/log';
-import { loadInsideRegions, saveInsideRegions } from '../state/persistence';
+import { describeDuration } from '../diagnostics/snapshot';
+import { loadInsideRegions, saveInsideRegions, swapLastFixAt } from '../state/persistence';
 import { CrossingDetectedHandler, EngineStatus, GeofencingEngine } from './types';
 
 export interface EngineConfig {
@@ -185,7 +186,7 @@ export function createGeofencingEngine(config: EngineConfig): GeofencingEngine {
    * region set never needs to change as the user moves — every region here
    * is genuinely permanent for the lifetime of monitoring, which is also
    * why this design doesn't come anywhere near iOS's 20-region cap (at
-   * most 8 point crossings + 1 wake circle = 9 regions, statically).
+   * most 8 point crossings + 2 wake circles (ULEZ, Congestion Charge) = 10 regions, statically).
    */
   async function registerRegions(): Promise<void> {
     const regions: Location.LocationRegion[] = [];
@@ -266,6 +267,34 @@ export function createGeofencingEngine(config: EngineConfig): GeofencingEngine {
       // It used to be swallowed by a bare `.catch(() => {})`, which made a
       // total ULEZ detection failure completely invisible.
       await logEvent('error', 'engine', 'Could not start fine location updates — ZONE DETECTION IS OFF', String(e));
+    }
+  }
+
+  /**
+   * Whether leaving `leaving`'s wake circle must NOT stop location updates,
+   * because another zone's circle still needs them.
+   *
+   * With a single zone (the ULEZ) this never came up. The Congestion Charge
+   * added a second, much smaller circle sitting entirely inside the ULEZ's —
+   * so driving out of central London exits the Congestion Charge circle
+   * while still deep inside the ULEZ one, and stopping updates there would
+   * silently switch off ULEZ detection for the rest of the drive.
+   *
+   * Uses the last known device fix. With no fix available it keeps updates
+   * running: the cost of being wrong that way is battery, the other way is a
+   * missed £180 PCN.
+   */
+  async function anotherZoneStillNeedsUpdates(leaving: Crossing): Promise<boolean> {
+    const others = state.crossings.flatMap((c) =>
+      c.id !== leaving.id && c.geofence.kind === 'polygon' ? [c.geofence] : []
+    );
+    if (others.length === 0) return false;
+    try {
+      const last = await Location.getLastKnownPositionAsync();
+      if (!last) return true;
+      return isInsideAnyCircle({ latitude: last.coords.latitude, longitude: last.coords.longitude }, others);
+    } catch {
+      return true;
     }
   }
 
@@ -353,6 +382,10 @@ export function createGeofencingEngine(config: EngineConfig): GeofencingEngine {
         // though it's also derived from the region's fixed centroid rather
         // than a device fix.
         setInside(crossing.id, false);
+        if (await anotherZoneStillNeedsUpdates(crossing)) {
+          await logEvent('info', 'engine', `Left ${crossing.shortName}'s wake circle — still inside another zone's, updates kept on`);
+          return;
+        }
         await stopFineLocationUpdates();
       }
       return;
@@ -381,10 +414,18 @@ export function createGeofencingEngine(config: EngineConfig): GeofencingEngine {
     await ensureHydrated('location update');
 
     const position: LatLng = { latitude: latest.coords.latitude, longitude: latest.coords.longitude };
+    // The gap since the previous fix is what shows a GPS dropout. Not a
+    // warning on its own: updates are distance-based (500m), so a long gap
+    // can just mean the car was stationary in traffic.
+    const fixAt = new Date(latest.timestamp || Date.now());
+    const previousFixAt = await swapLastFixAt(fixAt.toISOString());
+    const sincePrevious = previousFixAt
+      ? `, ${describeDuration(fixAt.getTime() - Date.parse(previousFixAt))} since previous fix`
+      : ', first fix recorded';
     await logEvent(
       'info',
       'location-task',
-      `Fix ${position.latitude.toFixed(4)},${position.longitude.toFixed(4)} (±${Math.round(latest.coords.accuracy ?? -1)}m)`
+      `Fix ${position.latitude.toFixed(4)},${position.longitude.toFixed(4)} (±${Math.round(latest.coords.accuracy ?? -1)}m${sincePrevious})`
     );
 
     for (const crossing of state.crossings) {
@@ -443,6 +484,23 @@ export function createGeofencingEngine(config: EngineConfig): GeofencingEngine {
   }
 
   /**
+   * Re-registers the geofences if the OS has dropped them, without touching
+   * the detection handler a running UI may have installed. Called by the
+   * background heartbeat: Android clears an app's geofences after a reboot
+   * and whenever device location is switched off, and until now nothing put
+   * them back until the user happened to open the app — every crossing in
+   * between was missed with nothing in the log to say so.
+   *
+   * Returns true if it had to re-register.
+   */
+  async function ensureRegistered(): Promise<boolean> {
+    if (await Location.hasStartedGeofencingAsync(config.geofenceTaskName)) return false;
+    await ensureHydrated('heartbeat re-register');
+    await registerRegions();
+    return true;
+  }
+
+  /**
    * What the OS actually thinks is running, as opposed to what the UI
    * believes. Surfaced in Settings → Diagnostics: "the toggle says On" and
    * "the OS is monitoring 9 regions" are different claims, and the gap
@@ -466,5 +524,5 @@ export function createGeofencingEngine(config: EngineConfig): GeofencingEngine {
     };
   }
 
-  return { requestPermissions, start, stop, getStatus };
+  return { requestPermissions, start, stop, getStatus, ensureRegistered };
 }
