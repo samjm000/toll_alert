@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import { Crossing, CrossingEvent } from '../types/crossing';
 import { loadCrossingEvents, loadReminderTimes } from '../state/persistence';
 import { logEvent } from '../diagnostics/log';
-import { deadlineText, LanguageCode, loadLanguage, priceText, STRINGS } from '../i18n';
+import { deadlineText, LanguageCode, loadLanguage, STRINGS } from '../i18n';
 import { ANDROID_CHANNEL_ID, ensureNotificationChannel, getNotificationPermissionStatus, PAYMENT_URL_KEY } from './index';
 
 /**
@@ -74,7 +74,7 @@ function buildContent(
     if (crossing) {
       return {
         title: t.reminderTitle(unique[0]),
-        body: t.reminderBody(priceText(language, crossing.price), deadlineText(strings, crossing.scheme.paymentDeadlineLabel)),
+        body: t.reminderBody(deadlineText(strings, crossing.scheme.paymentDeadlineLabel)),
         // One crossing owed, so a tap can go straight to its payment page.
         paymentUrl: crossing.paymentUrl,
       };

@@ -129,7 +129,6 @@ export function HomeScreen({ navigation }: Props) {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.eventTitle}>{crossing.name}</Text>
-                  <Text style={styles.eventSubtitle}>{crossing.price.label}</Text>
                 </View>
                 <StatusPill
                   label={crossing.type === 'point' ? t.home.point : t.home.zone}

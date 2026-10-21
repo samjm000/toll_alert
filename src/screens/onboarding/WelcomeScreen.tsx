@@ -1,15 +1,13 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useEffect, useRef, useState } from 'react';
-import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { FineStatCard } from '../../components/FineStatCard';
+import { FinesTotalBox } from '../../components/FinesTotalBox';
 import { Flashing } from '../../components/Flashing';
 import { LanguageButton } from '../../components/LanguagePicker';
 import { Logo } from '../../components/Logo';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { FINE_STAT_ROTATE_MS, FINE_STATS } from '../../config/fineStats';
 import { SUBSCRIPTIONS_ENABLED } from '../../config/release';
-import { formatCount, useLanguage } from '../../i18n';
+import { useLanguage } from '../../i18n';
 import { colors, radii, spacing } from '../../theme';
 import { OnboardingStackParamList } from '../../navigation/types';
 
@@ -18,29 +16,14 @@ type Props = NativeStackScreenProps<OnboardingStackParamList, 'Welcome'>;
 /**
  * The landing page — also what the GitHub Pages web mockup opens on.
  *
- * Client review (2026-09-24, via Rob): "AVOID THE TOLL FINES" in yellow; a
- * fines card for every toll covered, changing every 5 seconds; the "No
- * barrier. No excuse." section and its paragraph removed; and the Dartford
+ * Client review (2026-09-24, via Rob): "AVOID THE TOLL FINES" in yellow; the
+ * "No barrier. No excuse." section and its paragraph removed; and the Dartford
  * alert shown on the page itself, not only behind a "see what an alert
- * looks like" button, so people can see what they're getting.
+ * looks like" button, so people can see what they're getting. Follow-up
+ * (2026-10): the per-scheme fines cards became one combined annual total.
  */
 export function WelcomeScreen({ navigation }: Props) {
-  const { t, language } = useLanguage();
-  const [statIndex, setStatIndex] = useState(0);
-  const fade = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      Animated.timing(fade, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
-        setStatIndex((i) => (i + 1) % FINE_STATS.length);
-        Animated.timing(fade, { toValue: 1, duration: 200, useNativeDriver: true }).start();
-      });
-    }, FINE_STAT_ROTATE_MS);
-    return () => clearInterval(interval);
-  }, [fade]);
-
-  const stat = FINE_STATS[statIndex];
-  const millions = stat.totalMillions.toLocaleString(language === 'en' ? 'en-GB' : language);
+  const { t } = useLanguage();
 
   return (
     <View style={styles.root}>
@@ -59,24 +42,8 @@ export function WelcomeScreen({ navigation }: Props) {
           <Text style={styles.avoidFines}>{t.common.avoidFines}</Text>
         </View>
 
-        <Animated.View style={[styles.statWrap, { opacity: fade }]}>
-          <FineStatCard
-            badge={`⚠️ ${stat.badge}`}
-            number={
-              stat.count === undefined
-                ? t.stats.money(millions)
-                : `${formatCount(language, stat.count)}${stat.countIsFloor ? '+' : ''}`
-            }
-            label={t.stats.labels[stat.id] ?? ''}
-            total={stat.count === undefined ? undefined : t.stats.totalMillions(millions)}
-            fine={t.stats.fineEach(stat.fine)}
-            source={`Source: ${stat.source}${stat.estimate ? ' · total estimated from count × fine' : ''}`}
-          />
-        </Animated.View>
-        <View style={styles.statDots}>
-          {FINE_STATS.map((s, i) => (
-            <View key={s.id} style={[styles.statDot, i === statIndex && styles.statDotActive]} />
-          ))}
+        <View style={styles.statWrap}>
+          <FinesTotalBox />
         </View>
 
         <View style={styles.previewSection}>
@@ -91,7 +58,7 @@ export function WelcomeScreen({ navigation }: Props) {
                 <Text style={styles.notificationTime}>{t.welcome.alertNow}</Text>
               </View>
               <Text style={styles.notificationTitle}>{t.welcome.alertTitle('Dartford Crossing')}</Text>
-              <Text style={styles.notificationBody}>{t.welcome.alertBody('£3.50')}</Text>
+              <Text style={styles.notificationBody}>{t.welcome.alertBody}</Text>
               <Flashing style={styles.tapToPay}>
                 <Text style={styles.tapToPayText}>{t.common.tapToPay}</Text>
               </Flashing>
@@ -144,17 +111,7 @@ const styles = StyleSheet.create({
   },
   statWrap: {
     marginTop: spacing.md,
-    // Cards differ in label length; a floor stops the page jumping every 5s.
-    minHeight: 250,
   },
-  statDots: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: spacing.sm,
-  },
-  statDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.border },
-  statDotActive: { backgroundColor: colors.primary },
   previewSection: {
     marginTop: spacing.lg,
     gap: spacing.sm,

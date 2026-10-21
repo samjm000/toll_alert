@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import { Crossing } from '../types/crossing';
 import { describeChargeableWindow } from '../config/chargeableHours';
 import { logEvent } from '../diagnostics/log';
-import { deadlineText, loadLanguage, priceText, STRINGS } from '../i18n';
+import { deadlineText, loadLanguage, STRINGS } from '../i18n';
 
 /**
  * Local push notifications for "you've crossed — pay by [time]" alerts.
@@ -222,10 +222,7 @@ export async function presentCrossingNotification(
   const content = chargeable
     ? {
         title: t.detectedTitle(crossing.shortName),
-        body: t.detectedBody(
-          priceText(language, crossing.price),
-          deadlineText(STRINGS[language], crossing.scheme.paymentDeadlineLabel)
-        ),
+        body: t.detectedBody(deadlineText(STRINGS[language], crossing.scheme.paymentDeadlineLabel)),
         categoryIdentifier: CROSSING_CATEGORY_ID,
       }
     : {

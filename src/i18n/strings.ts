@@ -11,7 +11,7 @@
  * - Settings, Diagnostics and Subscription: tester/admin screens, English
  *   only apart from the language picker itself.
  * - Anything read from the crossings config (fine stage labels, caveats,
- *   operator names, price labels): that is data from the operators' own
+ *   operator names): that is data from the operators' own
  *   English pages, and a mistranslated fine rule is worse than an English
  *   one. Payment deadlines are the exception — there are only a handful and
  *   they go into the alert itself — see `deadlines` below.
@@ -47,17 +47,9 @@ export interface Strings {
     alertPreviewTitle: string;
     alertNow: string;
     alertTitle: (name: string) => string;
-    alertBody: (price: string) => string;
+    alertBody: string;
     download: string;
     subscribe: string;
-  };
-  stats: {
-    fineEach: (amount: string) => string;
-    totalMillions: (millions: string) => string;
-    /** The big number on a card that has no count, only money: "£128.4m". */
-    money: (millions: string) => string;
-    /** The label under each stat's big number, keyed by FineStat.id. */
-    labels: Record<string, string>;
   };
   ulezIntro: {
     title: string;
@@ -119,9 +111,7 @@ export interface Strings {
     detected: (when: string) => string;
     paid: string;
     unpaid: string;
-    charge: string;
     payBy: (deadline: string) => string;
-    ifUnpaid: string;
     paidDisclaimer: (operator: string) => string;
     verified: (operator: string, date: string) => string;
     openPayment: string;
@@ -131,13 +121,13 @@ export interface Strings {
   };
   notifications: {
     detectedTitle: (name: string) => string;
-    detectedBody: (price: string, deadline: string) => string;
+    detectedBody: (deadline: string) => string;
     freeTitle: (name: string) => string;
     freeBodyWindow: (name: string, window: string) => string;
     freeBody: (name: string) => string;
     markPaidAction: string;
     reminderTitle: (name: string) => string;
-    reminderBody: (price: string, deadline: string) => string;
+    reminderBody: (deadline: string) => string;
     reminderManyTitle: (count: number) => string;
     reminderManyBody: (names: string) => string;
     and: string;
@@ -163,27 +153,12 @@ const en: Strings = {
     alertPreviewTitle: 'This is what the alert looks like',
     alertNow: 'now',
     alertTitle: (name) => `${name} detected — TAP TO PAY`,
-    alertBody: (price) => `Pay ${price} on the official site. AVOID THE TOLL FINES.`,
+    alertBody: 'Pay on the official site. AVOID THE TOLL FINES.',
     download: 'GET STARTED',
     subscribe: 'Then subscribe for just £4.99 per year.',
   },
-  stats: {
-    fineEach: (amount) => `Fine: ${amount} each`,
-    totalMillions: (millions) => `£${millions}m+ in fines`,
-    money: (millions) => `£${millions}m`,
-    labels: {
-      dartford: 'paid in Dart Charge fines in 2024–25 — more than the toll itself',
-      ulez: 'ULEZ fines in the first six months of the London-wide zone',
-      congestion: 'Congestion Charge fines in 2024',
-      'tfl-tunnels': 'tunnel fines in the first four months (2025)',
-      merseyflow: 'Mersey Gateway fines in its first year',
-      tyne: 'Tyne Tunnel fines in six months',
-      humber: 'unpaid-toll notices after going cashless (2026)',
-      warburton: 'crossings recorded unpaid since January 2026',
-    },
-  },
   ulezIntro: {
-    title: 'One wrong turn. £12.50 gone.',
+    title: 'One wrong turn.',
     copy:
       'The Ultra Low Emission Zone covers every London borough — not just the centre. Cameras enforce it automatically the instant a non-compliant vehicle enters, no warning sign required. Toll Alert watches the boundary so you don’t find out later.',
     getStarted: 'Get started',
@@ -283,9 +258,7 @@ const en: Strings = {
     detected: (when) => `Detected ${when}`,
     paid: 'Paid',
     unpaid: 'Unpaid',
-    charge: 'Charge',
     payBy: (deadline) => `⏱ Pay by: ${deadline}`,
-    ifUnpaid: 'If unpaid',
     paidDisclaimer: (operator) =>
       `Tapping "Mark as paid" only dismisses this reminder — Toll Alert does not verify payment with ${operator}. You’re responsible for actually paying.`,
     verified: (operator, date) =>
@@ -298,15 +271,15 @@ const en: Strings = {
   },
   notifications: {
     detectedTitle: (name) => `${name} detected — TAP TO PAY`,
-    detectedBody: (price, deadline) =>
-      `AVOID THE TOLL FINES: pay ${price} by ${deadline}. Tap to pay on the official site, then mark as paid.`,
+    detectedBody: (deadline) =>
+      `AVOID THE TOLL FINES: pay by ${deadline}. Tap to pay on the official site, then mark as paid.`,
     freeTitle: (name) => `${name} detected — nothing to pay`,
     freeBodyWindow: (name, window) => `${name} only charges ${window}, so this crossing is free. Tap to check if that looks wrong.`,
     freeBody: (name) => `${name} is free at this time, so there’s nothing to pay. Tap to check if that looks wrong.`,
     markPaidAction: 'Mark as paid',
     reminderTitle: (name) => `${name} still unpaid — TAP TO PAY`,
-    reminderBody: (price, deadline) =>
-      `AVOID THE TOLL FINES: pay ${price} by ${deadline}. Open Toll Alert and tap "Mark as paid" once you have.`,
+    reminderBody: (deadline) =>
+      `AVOID THE TOLL FINES: pay by ${deadline}. Open Toll Alert and tap "Mark as paid" once you have.`,
     reminderManyTitle: (count) => `${count} unpaid crossings — TAP TO PAY`,
     reminderManyBody: (names) =>
       `AVOID THE TOLL FINES: ${names} still need paying. Open Toll Alert and tap "Mark as paid" for each one you’ve dealt with.`,
@@ -332,27 +305,12 @@ const fr: Strings = {
     alertPreviewTitle: 'Voici à quoi ressemble l’alerte',
     alertNow: 'maintenant',
     alertTitle: (name) => `${name} détecté — TOUCHEZ POUR PAYER`,
-    alertBody: (price) => `Payez ${price} sur le site officiel. ÉVITEZ LES AMENDES DE PÉAGE.`,
+    alertBody: 'Payez sur le site officiel. ÉVITEZ LES AMENDES DE PÉAGE.',
     download: 'COMMENCER',
     subscribe: 'Puis abonnez-vous pour seulement 4,99 £ par an.',
   },
-  stats: {
-    fineEach: (amount) => `Amende : ${amount} chacune`,
-    totalMillions: (millions) => `plus de ${millions} M£ d’amendes`,
-    money: (millions) => `${millions} M£`,
-    labels: {
-      dartford: 'd’amendes Dart Charge payées en 2024-25 — plus que le péage lui-même',
-      ulez: 'amendes ULEZ lors des six premiers mois de la zone étendue à tout Londres',
-      congestion: 'amendes de péage urbain (Congestion Charge) en 2024',
-      'tfl-tunnels': 'amendes des tunnels lors des quatre premiers mois (2025)',
-      merseyflow: 'amendes du Mersey Gateway lors de sa première année',
-      tyne: 'amendes du Tyne Tunnel en six mois',
-      humber: 'avis de péage impayé après le passage au sans-espèces (2026)',
-      warburton: 'passages enregistrés impayés depuis janvier 2026',
-    },
-  },
   ulezIntro: {
-    title: 'Un mauvais virage. 12,50 £ perdus.',
+    title: 'Un mauvais virage.',
     copy:
       'La zone à ultra-faibles émissions (ULEZ) couvre tous les quartiers de Londres — pas seulement le centre. Des caméras la contrôlent automatiquement dès qu’un véhicule non conforme y entre, sans panneau d’avertissement. Toll Alert surveille la limite pour que vous ne le découvriez pas trop tard.',
     getStarted: 'Commencer',
@@ -452,9 +410,7 @@ const fr: Strings = {
     detected: (when) => `Détecté le ${when}`,
     paid: 'Payé',
     unpaid: 'Impayé',
-    charge: 'Montant',
     payBy: (deadline) => `⏱ À payer avant : ${deadline}`,
-    ifUnpaid: 'En cas de non-paiement',
     paidDisclaimer: (operator) =>
       `Toucher « Marquer comme payé » ferme seulement ce rappel — Toll Alert ne vérifie pas le paiement auprès de ${operator}. C’est à vous de payer réellement.`,
     verified: (operator, date) =>
@@ -467,15 +423,15 @@ const fr: Strings = {
   },
   notifications: {
     detectedTitle: (name) => `${name} détecté — TOUCHEZ POUR PAYER`,
-    detectedBody: (price, deadline) =>
-      `ÉVITEZ LES AMENDES : payez ${price} avant ${deadline}. Touchez pour payer sur le site officiel, puis marquez comme payé.`,
+    detectedBody: (deadline) =>
+      `ÉVITEZ LES AMENDES : payez avant ${deadline}. Touchez pour payer sur le site officiel, puis marquez comme payé.`,
     freeTitle: (name) => `${name} détecté — rien à payer`,
     freeBodyWindow: (name, window) => `${name} n’est payant que de ${window}, ce passage est donc gratuit. Touchez pour vérifier.`,
     freeBody: (name) => `${name} est gratuit à cette heure, il n’y a rien à payer. Touchez pour vérifier.`,
     markPaidAction: 'Marquer comme payé',
     reminderTitle: (name) => `${name} toujours impayé — TOUCHEZ POUR PAYER`,
-    reminderBody: (price, deadline) =>
-      `ÉVITEZ LES AMENDES : payez ${price} avant ${deadline}. Ouvrez Toll Alert et touchez « Marquer comme payé » une fois fait.`,
+    reminderBody: (deadline) =>
+      `ÉVITEZ LES AMENDES : payez avant ${deadline}. Ouvrez Toll Alert et touchez « Marquer comme payé » une fois fait.`,
     reminderManyTitle: (count) => `${count} passages impayés — TOUCHEZ POUR PAYER`,
     reminderManyBody: (names) =>
       `ÉVITEZ LES AMENDES : ${names} restent à payer. Ouvrez Toll Alert et touchez « Marquer comme payé » pour chacun.`,
@@ -506,27 +462,12 @@ const de: Strings = {
     alertPreviewTitle: 'So sieht die Benachrichtigung aus',
     alertNow: 'jetzt',
     alertTitle: (name) => `${name} erkannt — TIPPEN ZUM BEZAHLEN`,
-    alertBody: (price) => `Zahlen Sie ${price} auf der offiziellen Website. VERMEIDEN SIE MAUT-STRAFEN.`,
+    alertBody: 'Zahlen Sie auf der offiziellen Website. VERMEIDEN SIE MAUT-STRAFEN.',
     download: 'LOSLEGEN',
     subscribe: 'Danach nur 4,99 £ pro Jahr im Abo.',
   },
-  stats: {
-    fineEach: (amount) => `Strafe: je ${amount}`,
-    totalMillions: (millions) => `über ${millions} Mio. £ an Strafen`,
-    money: (millions) => `${millions} Mio. £`,
-    labels: {
-      dartford: 'an Dart-Charge-Strafen 2024–25 gezahlt — mehr als die Maut selbst',
-      ulez: 'ULEZ-Strafen in den ersten sechs Monaten der Londoner Gesamtzone',
-      congestion: 'Congestion-Charge-Strafen im Jahr 2024',
-      'tfl-tunnels': 'Tunnel-Strafen in den ersten vier Monaten (2025)',
-      merseyflow: 'Mersey-Gateway-Strafen im ersten Jahr',
-      tyne: 'Tyne-Tunnel-Strafen in sechs Monaten',
-      humber: 'Mahnungen wegen unbezahlter Maut nach Umstellung auf bargeldlos (2026)',
-      warburton: 'als unbezahlt erfasste Überfahrten seit Januar 2026',
-    },
-  },
   ulezIntro: {
-    title: 'Einmal falsch abgebogen. 12,50 £ weg.',
+    title: 'Einmal falsch abgebogen.',
     copy:
       'Die Ultra Low Emission Zone umfasst jeden Londoner Stadtbezirk — nicht nur das Zentrum. Kameras kontrollieren sie automatisch, sobald ein nicht konformes Fahrzeug einfährt, ohne Warnschild. Toll Alert überwacht die Grenze, damit Sie es nicht erst später erfahren.',
     getStarted: 'Los geht’s',
@@ -626,9 +567,7 @@ const de: Strings = {
     detected: (when) => `Erkannt am ${when}`,
     paid: 'Bezahlt',
     unpaid: 'Unbezahlt',
-    charge: 'Gebühr',
     payBy: (deadline) => `⏱ Zahlen bis: ${deadline}`,
-    ifUnpaid: 'Bei Nichtzahlung',
     paidDisclaimer: (operator) =>
       `„Als bezahlt markieren“ schließt nur diese Erinnerung — Toll Alert prüft die Zahlung nicht bei ${operator}. Sie sind selbst für die Zahlung verantwortlich.`,
     verified: (operator, date) =>
@@ -641,15 +580,15 @@ const de: Strings = {
   },
   notifications: {
     detectedTitle: (name) => `${name} erkannt — TIPPEN ZUM BEZAHLEN`,
-    detectedBody: (price, deadline) =>
-      `VERMEIDEN SIE STRAFEN: Zahlen Sie ${price} bis ${deadline}. Tippen, um auf der offiziellen Website zu zahlen, dann als bezahlt markieren.`,
+    detectedBody: (deadline) =>
+      `VERMEIDEN SIE STRAFEN: Zahlen Sie bis ${deadline}. Tippen, um auf der offiziellen Website zu zahlen, dann als bezahlt markieren.`,
     freeTitle: (name) => `${name} erkannt — nichts zu zahlen`,
     freeBodyWindow: (name, window) => `${name} ist nur ${window} gebührenpflichtig, diese Überfahrt ist also kostenlos. Tippen, um das zu prüfen.`,
     freeBody: (name) => `${name} ist zu dieser Zeit kostenlos, es ist nichts zu zahlen. Tippen, um das zu prüfen.`,
     markPaidAction: 'Als bezahlt markieren',
     reminderTitle: (name) => `${name} noch unbezahlt — TIPPEN ZUM BEZAHLEN`,
-    reminderBody: (price, deadline) =>
-      `VERMEIDEN SIE STRAFEN: Zahlen Sie ${price} bis ${deadline}. Öffnen Sie Toll Alert und tippen Sie danach auf „Als bezahlt markieren“.`,
+    reminderBody: (deadline) =>
+      `VERMEIDEN SIE STRAFEN: Zahlen Sie bis ${deadline}. Öffnen Sie Toll Alert und tippen Sie danach auf „Als bezahlt markieren“.`,
     reminderManyTitle: (count) => `${count} unbezahlte Überfahrten — TIPPEN ZUM BEZAHLEN`,
     reminderManyBody: (names) =>
       `VERMEIDEN SIE STRAFEN: ${names} sind noch zu bezahlen. Öffnen Sie Toll Alert und markieren Sie jede erledigte als bezahlt.`,
@@ -680,27 +619,12 @@ const es: Strings = {
     alertPreviewTitle: 'Así es la alerta',
     alertNow: 'ahora',
     alertTitle: (name) => `${name} detectado — TOQUE PARA PAGAR`,
-    alertBody: (price) => `Pague ${price} en la web oficial. EVITE LAS MULTAS DE PEAJE.`,
+    alertBody: 'Pague en la web oficial. EVITE LAS MULTAS DE PEAJE.',
     download: 'EMPEZAR',
     subscribe: 'Después, suscríbase por solo 4,99 £ al año.',
   },
-  stats: {
-    fineEach: (amount) => `Multa: ${amount} cada una`,
-    totalMillions: (millions) => `más de ${millions} M£ en multas`,
-    money: (millions) => `${millions} M£`,
-    labels: {
-      dartford: 'pagados en multas de Dart Charge en 2024-25, más que el propio peaje',
-      ulez: 'multas ULEZ en los primeros seis meses de la zona ampliada a todo Londres',
-      congestion: 'multas de la Congestion Charge en 2024',
-      'tfl-tunnels': 'multas de los túneles en los primeros cuatro meses (2025)',
-      merseyflow: 'multas del Mersey Gateway en su primer año',
-      tyne: 'multas del Tyne Tunnel en seis meses',
-      humber: 'avisos de peaje impagado tras eliminar el pago en efectivo (2026)',
-      warburton: 'pasos registrados como impagados desde enero de 2026',
-    },
-  },
   ulezIntro: {
-    title: 'Un giro equivocado. 12,50 £ perdidas.',
+    title: 'Un giro equivocado.',
     copy:
       'La zona de emisiones ultrabajas (ULEZ) cubre todos los distritos de Londres, no solo el centro. Las cámaras la controlan automáticamente en cuanto entra un vehículo no conforme, sin señal de aviso. Toll Alert vigila el límite para que no se entere demasiado tarde.',
     getStarted: 'Empezar',
@@ -800,9 +724,7 @@ const es: Strings = {
     detected: (when) => `Detectado el ${when}`,
     paid: 'Pagado',
     unpaid: 'Sin pagar',
-    charge: 'Importe',
     payBy: (deadline) => `⏱ Pagar antes de: ${deadline}`,
-    ifUnpaid: 'Si no se paga',
     paidDisclaimer: (operator) =>
       `Tocar «Marcar como pagado» solo cierra este recordatorio: Toll Alert no verifica el pago con ${operator}. Usted es responsable de pagar.`,
     verified: (operator, date) =>
@@ -815,15 +737,15 @@ const es: Strings = {
   },
   notifications: {
     detectedTitle: (name) => `${name} detectado — TOQUE PARA PAGAR`,
-    detectedBody: (price, deadline) =>
-      `EVITE LAS MULTAS: pague ${price} antes de ${deadline}. Toque para pagar en la web oficial y márquelo como pagado.`,
+    detectedBody: (deadline) =>
+      `EVITE LAS MULTAS: pague antes de ${deadline}. Toque para pagar en la web oficial y márquelo como pagado.`,
     freeTitle: (name) => `${name} detectado — nada que pagar`,
     freeBodyWindow: (name, window) => `${name} solo cobra de ${window}, así que este paso es gratis. Toque para comprobarlo.`,
     freeBody: (name) => `${name} es gratis a esta hora, no hay nada que pagar. Toque para comprobarlo.`,
     markPaidAction: 'Marcar como pagado',
     reminderTitle: (name) => `${name} sigue sin pagar — TOQUE PARA PAGAR`,
-    reminderBody: (price, deadline) =>
-      `EVITE LAS MULTAS: pague ${price} antes de ${deadline}. Abra Toll Alert y toque «Marcar como pagado» cuando lo haya hecho.`,
+    reminderBody: (deadline) =>
+      `EVITE LAS MULTAS: pague antes de ${deadline}. Abra Toll Alert y toque «Marcar como pagado» cuando lo haya hecho.`,
     reminderManyTitle: (count) => `${count} pasos sin pagar — TOQUE PARA PAGAR`,
     reminderManyBody: (names) =>
       `EVITE LAS MULTAS: ${names} siguen pendientes. Abra Toll Alert y marque como pagado cada uno que haya resuelto.`,
@@ -854,27 +776,12 @@ const pl: Strings = {
     alertPreviewTitle: 'Tak wygląda powiadomienie',
     alertNow: 'teraz',
     alertTitle: (name) => `Wykryto: ${name} — DOTKNIJ, ABY ZAPŁACIĆ`,
-    alertBody: (price) => `Zapłać ${price} na oficjalnej stronie. UNIKAJ MANDATÓW.`,
+    alertBody: 'Zapłać na oficjalnej stronie. UNIKAJ MANDATÓW.',
     download: 'ZACZNIJ',
     subscribe: 'Potem subskrypcja za jedyne 4,99 £ rocznie.',
   },
-  stats: {
-    fineEach: (amount) => `Kara: ${amount} za każdy`,
-    totalMillions: (millions) => `ponad ${millions} mln £ kar`,
-    money: (millions) => `${millions} mln £`,
-    labels: {
-      dartford: 'zapłacono w karach Dart Charge w latach 2024–25 — więcej niż za samą opłatę',
-      ulez: 'kar ULEZ w pierwszych sześciu miesiącach strefy obejmującej cały Londyn',
-      congestion: 'kar Congestion Charge w 2024 roku',
-      'tfl-tunnels': 'kar za tunele w pierwszych czterech miesiącach (2025)',
-      merseyflow: 'kar na Mersey Gateway w pierwszym roku',
-      tyne: 'kar za Tyne Tunnel w ciągu sześciu miesięcy',
-      humber: 'wezwań za nieopłacony przejazd po przejściu na płatności bezgotówkowe (2026)',
-      warburton: 'przejazdów zarejestrowanych jako nieopłacone od stycznia 2026',
-    },
-  },
   ulezIntro: {
-    title: 'Jeden zły skręt. 12,50 £ mniej.',
+    title: 'Jeden zły skręt.',
     copy:
       'Strefa ULEZ obejmuje każdą dzielnicę Londynu — nie tylko centrum. Kamery egzekwują ją automatycznie w chwili wjazdu niespełniającego norm pojazdu, bez znaku ostrzegawczego. Toll Alert pilnuje granicy, żebyś nie dowiedział się za późno.',
     getStarted: 'Zaczynamy',
@@ -974,9 +881,7 @@ const pl: Strings = {
     detected: (when) => `Wykryto ${when}`,
     paid: 'Opłacone',
     unpaid: 'Nieopłacone',
-    charge: 'Opłata',
     payBy: (deadline) => `⏱ Zapłać do: ${deadline}`,
-    ifUnpaid: 'W razie braku opłaty',
     paidDisclaimer: (operator) =>
       `„Oznacz jako opłacone” tylko zamyka to przypomnienie — Toll Alert nie weryfikuje płatności w ${operator}. To ty odpowiadasz za zapłatę.`,
     verified: (operator, date) =>
@@ -989,15 +894,15 @@ const pl: Strings = {
   },
   notifications: {
     detectedTitle: (name) => `Wykryto: ${name} — DOTKNIJ, ABY ZAPŁACIĆ`,
-    detectedBody: (price, deadline) =>
-      `UNIKAJ MANDATÓW: zapłać ${price} do ${deadline}. Dotknij, aby zapłacić na oficjalnej stronie, potem oznacz jako opłacone.`,
+    detectedBody: (deadline) =>
+      `UNIKAJ MANDATÓW: zapłać do ${deadline}. Dotknij, aby zapłacić na oficjalnej stronie, potem oznacz jako opłacone.`,
     freeTitle: (name) => `Wykryto: ${name} — nic do zapłaty`,
     freeBodyWindow: (name, window) => `${name} pobiera opłaty tylko w godz. ${window}, więc ten przejazd jest bezpłatny. Dotknij, aby sprawdzić.`,
     freeBody: (name) => `${name} jest o tej porze bezpłatny, nie ma nic do zapłaty. Dotknij, aby sprawdzić.`,
     markPaidAction: 'Oznacz jako opłacone',
     reminderTitle: (name) => `${name} wciąż nieopłacone — DOTKNIJ, ABY ZAPŁACIĆ`,
-    reminderBody: (price, deadline) =>
-      `UNIKAJ MANDATÓW: zapłać ${price} do ${deadline}. Otwórz Toll Alert i dotknij „Oznacz jako opłacone”, gdy to zrobisz.`,
+    reminderBody: (deadline) =>
+      `UNIKAJ MANDATÓW: zapłać do ${deadline}. Otwórz Toll Alert i dotknij „Oznacz jako opłacone”, gdy to zrobisz.`,
     reminderManyTitle: (count) => `Nieopłacone przejazdy: ${count} — DOTKNIJ, ABY ZAPŁACIĆ`,
     reminderManyBody: (names) =>
       `UNIKAJ MANDATÓW: ${names} wciąż wymagają zapłaty. Otwórz Toll Alert i oznacz każdy załatwiony jako opłacony.`,
@@ -1028,27 +933,12 @@ const ro: Strings = {
     alertPreviewTitle: 'Așa arată alerta',
     alertNow: 'acum',
     alertTitle: (name) => `${name} detectat — ATINGEȚI PENTRU A PLĂTI`,
-    alertBody: (price) => `Plătiți ${price} pe site-ul oficial. EVITAȚI AMENZILE DE TAXĂ.`,
+    alertBody: 'Plătiți pe site-ul oficial. EVITAȚI AMENZILE DE TAXĂ.',
     download: 'ÎNCEPEȚI',
     subscribe: 'Apoi abonament de doar 4,99 £ pe an.',
   },
-  stats: {
-    fineEach: (amount) => `Amendă: ${amount} fiecare`,
-    totalMillions: (millions) => `peste ${millions} mil. £ în amenzi`,
-    money: (millions) => `${millions} mil. £`,
-    labels: {
-      dartford: 'plătite în amenzi Dart Charge în 2024–25 — mai mult decât taxa însăși',
-      ulez: 'amenzi ULEZ în primele șase luni ale zonei extinse la tot Londra',
-      congestion: 'amenzi Congestion Charge în 2024',
-      'tfl-tunnels': 'amenzi pentru tuneluri în primele patru luni (2025)',
-      merseyflow: 'amenzi Mersey Gateway în primul an',
-      tyne: 'amenzi Tyne Tunnel în șase luni',
-      humber: 'notificări de taxă neplătită după trecerea la plata fără numerar (2026)',
-      warburton: 'treceri înregistrate ca neplătite din ianuarie 2026',
-    },
-  },
   ulezIntro: {
-    title: 'O singură greșeală de traseu. 12,50 £ pierdute.',
+    title: 'O singură greșeală de traseu.',
     copy:
       'Zona ULEZ acoperă toate cartierele Londrei — nu doar centrul. Camerele o aplică automat în clipa în care intră un vehicul neconform, fără niciun panou de avertizare. Toll Alert supraveghează limita ca să nu aflați prea târziu.',
     getStarted: 'Să începem',
@@ -1148,9 +1038,7 @@ const ro: Strings = {
     detected: (when) => `Detectat ${when}`,
     paid: 'Plătit',
     unpaid: 'Neplătit',
-    charge: 'Taxă',
     payBy: (deadline) => `⏱ De plătit până la: ${deadline}`,
-    ifUnpaid: 'Dacă nu plătiți',
     paidDisclaimer: (operator) =>
       `„Marchează ca plătit” doar închide această reamintire — Toll Alert nu verifică plata la ${operator}. Sunteți responsabil să plătiți efectiv.`,
     verified: (operator, date) =>
@@ -1163,15 +1051,15 @@ const ro: Strings = {
   },
   notifications: {
     detectedTitle: (name) => `${name} detectat — ATINGEȚI PENTRU A PLĂTI`,
-    detectedBody: (price, deadline) =>
-      `EVITAȚI AMENZILE: plătiți ${price} până la ${deadline}. Atingeți pentru a plăti pe site-ul oficial, apoi marcați ca plătit.`,
+    detectedBody: (deadline) =>
+      `EVITAȚI AMENZILE: plătiți până la ${deadline}. Atingeți pentru a plăti pe site-ul oficial, apoi marcați ca plătit.`,
     freeTitle: (name) => `${name} detectat — nimic de plată`,
     freeBodyWindow: (name, window) => `${name} se taxează doar între ${window}, deci trecerea e gratuită. Atingeți pentru a verifica.`,
     freeBody: (name) => `${name} este gratuit la această oră, nu aveți nimic de plată. Atingeți pentru a verifica.`,
     markPaidAction: 'Marchează ca plătit',
     reminderTitle: (name) => `${name} încă neplătit — ATINGEȚI PENTRU A PLĂTI`,
-    reminderBody: (price, deadline) =>
-      `EVITAȚI AMENZILE: plătiți ${price} până la ${deadline}. Deschideți Toll Alert și atingeți „Marchează ca plătit” după plată.`,
+    reminderBody: (deadline) =>
+      `EVITAȚI AMENZILE: plătiți până la ${deadline}. Deschideți Toll Alert și atingeți „Marchează ca plătit” după plată.`,
     reminderManyTitle: (count) => `${count} treceri neplătite — ATINGEȚI PENTRU A PLĂTI`,
     reminderManyBody: (names) =>
       `EVITAȚI AMENZILE: ${names} trebuie încă plătite. Deschideți Toll Alert și marcați fiecare rezolvată ca plătită.`,

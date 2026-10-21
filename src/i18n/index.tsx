@@ -37,24 +37,6 @@ export function deadlineText(t: Strings, englishLabel: string): string {
   return t.deadlines[englishLabel] ?? englishLabel.toLowerCase();
 }
 
-/**
- * A crossing's price for alert text. English keeps the config's full label
- * ("£12.50 per day (non-compliant vehicles)"); other languages get the bare
- * amount, since the label is untranslated operator wording.
- */
-export function priceText(language: LanguageCode, price: { amount: number; label: string }): string {
-  return language === 'en' ? price.label : `£${price.amount.toFixed(2)}`;
-}
-
-/** Formats a whole number with the language's own digit grouping ("1,700,000" / "1 700 000"). */
-export function formatCount(language: LanguageCode, value: number): string {
-  try {
-    return value.toLocaleString(language === 'en' ? 'en-GB' : language);
-  } catch {
-    return String(value);
-  }
-}
-
 interface LanguageContextValue {
   language: LanguageCode;
   t: Strings;

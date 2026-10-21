@@ -199,7 +199,7 @@ const TT2_SCHEME: ChargingScheme = {
   ],
   sourceUrl: 'https://www.tt2.co.uk/',
   verifiedAt: '2026-09-05',
-  caveat: 'Toll rate shown is effective from 1 May 2026 — confirm it hasn’t changed again since.',
+  caveat: 'Toll rates change — confirm the current rate on the official site before paying.',
 };
 
 const HUMBER_BRIDGE_SCHEME: ChargingScheme = {
@@ -416,7 +416,7 @@ export const MOCK_CROSSINGS_CONFIG: CrossingsConfig = {
         verifiedAt: '2026-09-24',
         caveat:
           'The zone boundary used to detect this is an approximation, not TfL’s official map — near the ' +
-          'edge of the zone, check TfL’s map before paying. Electric vehicles pay £13.50 rather than £18, and ' +
+          'edge of the zone, check TfL’s map before paying. Electric vehicles are charged a different rate, and ' +
           'many vehicles (e.g. Blue Badge holders who have registered) are exempt.',
       },
       // Mon-Fri 07:00-18:00, Sat/Sun and bank holidays 12:00-18:00 (bank

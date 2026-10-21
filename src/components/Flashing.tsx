@@ -1,5 +1,6 @@
-import { ReactNode, useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, StyleProp, ViewStyle } from 'react-native';
+import { ReactNode, useEffect, useRef } from 'react';
+import { Animated, StyleProp, ViewStyle } from 'react-native';
+import { useReduceMotion } from './useReduceMotion';
 
 /**
  * Blinks its children on and off, for anything still waiting to be paid.
@@ -15,15 +16,7 @@ import { AccessibilityInfo, Animated, StyleProp, ViewStyle } from 'react-native'
  */
 export function Flashing({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   const opacity = useRef(new Animated.Value(1)).current;
-  const [reduceMotion, setReduceMotion] = useState(false);
-
-  useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled()
-      .then(setReduceMotion)
-      .catch(() => {});
-    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
-    return () => subscription.remove();
-  }, []);
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
     if (reduceMotion) {

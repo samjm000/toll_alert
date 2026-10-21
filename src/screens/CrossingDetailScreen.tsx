@@ -58,8 +58,6 @@ export function CrossingDetailScreen({ route, navigation }: Props) {
         {!isPaid && <Text style={styles.avoidFines}>{t.common.avoidFines}</Text>}
 
         <Card style={styles.priceCard}>
-          <Text style={styles.priceLabel}>{t.detail.charge}</Text>
-          <Text style={styles.price}>{crossing.price.label}</Text>
           <Text style={styles.paymentWindow}>
             {t.detail.payBy(language === 'en' ? crossing.scheme.paymentDeadlineLabel : deadlineText(t, crossing.scheme.paymentDeadlineLabel))}
           </Text>
@@ -70,17 +68,6 @@ export function CrossingDetailScreen({ route, navigation }: Props) {
             <Text style={styles.caveatText}>⚠ {crossing.scheme.caveat}</Text>
           </Card>
         )}
-
-        <Card>
-          <Text style={styles.cardTitle}>{t.detail.ifUnpaid}</Text>
-          {crossing.scheme.fineStages.map((stage, i) => (
-            <View key={i} style={styles.fineRow}>
-              <Text style={styles.fineLabel}>{stage.label}</Text>
-              <Text style={styles.fineAmount}>£{stage.amount.toFixed(2)}</Text>
-              {stage.note && <Text style={styles.fineNote}>{stage.note}</Text>}
-            </View>
-          ))}
-        </Card>
 
         <Text style={styles.disclaimer}>{t.detail.paidDisclaimer(crossing.scheme.operator)}</Text>
 
@@ -138,16 +125,9 @@ const styles = StyleSheet.create({
   avoidFines: { fontSize: 16, fontWeight: '900', color: colors.primary, letterSpacing: 0.5 },
   antiScam: { fontSize: 12, color: colors.textMuted, lineHeight: 17, textAlign: 'center' },
   priceCard: { gap: 4, borderLeftWidth: 4, borderLeftColor: colors.primary },
-  priceLabel: { fontSize: 12, color: colors.textMuted, textTransform: 'uppercase', fontWeight: '700' },
-  price: { fontSize: 24, fontWeight: '800', color: colors.text },
   paymentWindow: { fontSize: 13, color: colors.warning, marginTop: 6, fontWeight: '600' },
   caveatCard: { backgroundColor: colors.warningBg, borderColor: colors.warningBg },
   caveatText: { fontSize: 13, color: colors.text, lineHeight: 19 },
-  cardTitle: { fontSize: 13, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: spacing.xs },
-  fineRow: { paddingVertical: 6, borderTopWidth: 1, borderTopColor: colors.border },
-  fineLabel: { fontSize: 14, color: colors.text },
-  fineAmount: { fontSize: 14, fontWeight: '700', color: colors.text, marginTop: 2 },
-  fineNote: { fontSize: 12, color: colors.textMuted, marginTop: 2, lineHeight: 17 },
   disclaimer: { fontSize: 13, color: colors.textMuted, lineHeight: 19 },
   verified: { fontSize: 11, color: colors.textMuted, lineHeight: 16, fontStyle: 'italic' },
   notFound: { padding: spacing.lg, color: colors.textMuted },

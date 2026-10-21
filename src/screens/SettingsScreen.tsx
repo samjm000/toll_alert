@@ -113,7 +113,6 @@ export function SettingsScreen({ navigation }: Props) {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.crossingName}>{c.name}</Text>
-                <Text style={styles.crossingMeta}>{c.price.label}</Text>
                 <Text style={styles.crossingVerified}>
                   Verified {new Date(c.scheme.verifiedAt).toLocaleDateString([], { dateStyle: 'medium' })}
                 </Text>
@@ -325,7 +324,6 @@ const styles = StyleSheet.create({
   sectionCaption: { fontSize: 12, color: colors.textMuted, lineHeight: 17 },
   crossingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   crossingName: { fontSize: 15, fontWeight: '700', color: colors.text },
-  crossingMeta: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
   crossingVerified: { fontSize: 11, color: colors.textMuted, marginTop: 2, fontStyle: 'italic' },
   permRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   timeChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
