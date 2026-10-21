@@ -51,9 +51,7 @@ export interface Strings {
     download: string;
     subscribe: string;
   };
-  ulezIntro: {
-    title: string;
-    copy: string;
+  alertPreview: {
     getStarted: string;
   };
   howItWorks: {
@@ -157,10 +155,7 @@ const en: Strings = {
     download: 'GET STARTED',
     subscribe: 'Then subscribe for just £4.99 per year.',
   },
-  ulezIntro: {
-    title: 'One wrong turn.',
-    copy:
-      'The Ultra Low Emission Zone covers every London borough — not just the centre. Cameras enforce it automatically the instant a non-compliant vehicle enters, no warning sign required. Toll Alert watches the boundary so you don’t find out later.',
+  alertPreview: {
     getStarted: 'Get started',
   },
   howItWorks: {
@@ -309,10 +304,7 @@ const fr: Strings = {
     download: 'COMMENCER',
     subscribe: 'Puis abonnez-vous pour seulement 4,99 £ par an.',
   },
-  ulezIntro: {
-    title: 'Un mauvais virage.',
-    copy:
-      'La zone à ultra-faibles émissions (ULEZ) couvre tous les quartiers de Londres — pas seulement le centre. Des caméras la contrôlent automatiquement dès qu’un véhicule non conforme y entre, sans panneau d’avertissement. Toll Alert surveille la limite pour que vous ne le découvriez pas trop tard.',
+  alertPreview: {
     getStarted: 'Commencer',
   },
   howItWorks: {
@@ -466,10 +458,7 @@ const de: Strings = {
     download: 'LOSLEGEN',
     subscribe: 'Danach nur 4,99 £ pro Jahr im Abo.',
   },
-  ulezIntro: {
-    title: 'Einmal falsch abgebogen.',
-    copy:
-      'Die Ultra Low Emission Zone umfasst jeden Londoner Stadtbezirk — nicht nur das Zentrum. Kameras kontrollieren sie automatisch, sobald ein nicht konformes Fahrzeug einfährt, ohne Warnschild. Toll Alert überwacht die Grenze, damit Sie es nicht erst später erfahren.',
+  alertPreview: {
     getStarted: 'Los geht’s',
   },
   howItWorks: {
@@ -623,10 +612,7 @@ const es: Strings = {
     download: 'EMPEZAR',
     subscribe: 'Después, suscríbase por solo 4,99 £ al año.',
   },
-  ulezIntro: {
-    title: 'Un giro equivocado.',
-    copy:
-      'La zona de emisiones ultrabajas (ULEZ) cubre todos los distritos de Londres, no solo el centro. Las cámaras la controlan automáticamente en cuanto entra un vehículo no conforme, sin señal de aviso. Toll Alert vigila el límite para que no se entere demasiado tarde.',
+  alertPreview: {
     getStarted: 'Empezar',
   },
   howItWorks: {
@@ -780,10 +766,7 @@ const pl: Strings = {
     download: 'ZACZNIJ',
     subscribe: 'Potem subskrypcja za jedyne 4,99 £ rocznie.',
   },
-  ulezIntro: {
-    title: 'Jeden zły skręt.',
-    copy:
-      'Strefa ULEZ obejmuje każdą dzielnicę Londynu — nie tylko centrum. Kamery egzekwują ją automatycznie w chwili wjazdu niespełniającego norm pojazdu, bez znaku ostrzegawczego. Toll Alert pilnuje granicy, żebyś nie dowiedział się za późno.',
+  alertPreview: {
     getStarted: 'Zaczynamy',
   },
   howItWorks: {
@@ -937,10 +920,7 @@ const ro: Strings = {
     download: 'ÎNCEPEȚI',
     subscribe: 'Apoi abonament de doar 4,99 £ pe an.',
   },
-  ulezIntro: {
-    title: 'O singură greșeală de traseu.',
-    copy:
-      'Zona ULEZ acoperă toate cartierele Londrei — nu doar centrul. Camerele o aplică automat în clipa în care intră un vehicul neconform, fără niciun panou de avertizare. Toll Alert supraveghează limita ca să nu aflați prea târziu.',
+  alertPreview: {
     getStarted: 'Să începem',
   },
   howItWorks: {

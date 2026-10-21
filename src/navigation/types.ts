@@ -1,6 +1,6 @@
 export type OnboardingStackParamList = {
   Welcome: undefined;
-  UlezIntro: undefined;
+  AlertPreview: undefined;
   HowItWorks: undefined;
   Disclaimer: undefined;
   Permissions: undefined;
