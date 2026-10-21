@@ -38,7 +38,12 @@ export default function App() {
     <SafeAreaProvider>
       <LanguageProvider onChange={onLanguageChange}>
         <AppStateProvider>
-          <NavigationContainer theme={navigationTheme}>
+          {/* Web tab title. React Navigation's default uses the route name, which
+              is undefined while the app is still loading — the site showed "undefined". */}
+          <NavigationContainer
+            theme={navigationTheme}
+            documentTitle={{ formatter: (options) => (options?.title ? `${options.title} · Toll Alert` : 'Toll Alert') }}
+          >
             <RootNavigator />
             <StatusBar style="light" />
           </NavigationContainer>

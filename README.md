@@ -69,7 +69,7 @@ What's real:
   engine firing a notification, so you can walk the full
   detect → notify → tap → Paid flow today.
 - Crossing detail screen (what tapping the real push notification would
-  open): charge amount, pay-by window, payment link, "Mark as paid"
+  open): pay-by window, payment link, "Mark as paid"
   (dismiss-only, per your instruction to assume self-reported for v1).
 - Subscription screen: annual price pulled from a config object
   (`src/state/AppState.ts`, £4.99 placeholder, not hardcoded in a

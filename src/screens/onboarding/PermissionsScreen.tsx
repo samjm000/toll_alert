@@ -66,11 +66,23 @@ function renderSteps(steps: Segment[][]): React.ReactNode[] {
   );
 }
 
+/**
+ * Which phone's steps to show. On the web mockup there is no native platform,
+ * so it follows the visitor's browser — an iPhone visitor must never see the
+ * Android-only "Allow all the time" wording.
+ */
+function showsAndroidSteps(): boolean {
+  if (Platform.OS === 'web') {
+    return typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent);
+  }
+  return Platform.OS === 'android';
+}
+
 export function PermissionsScreen(_props: Props) {
   const { completeOnboarding, setBackgroundMonitoringEnabled } = useAppState();
   const [working, setWorking] = useState(false);
   const { t } = useLanguage();
-  const steps = renderSteps(Platform.OS === 'ios' ? t.permissions.iosSteps : t.permissions.androidSteps);
+  const steps = renderSteps(showsAndroidSteps() ? t.permissions.androidSteps : t.permissions.iosSteps);
 
   const enableThenContinue = async () => {
     setWorking(true);

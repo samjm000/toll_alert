@@ -257,7 +257,7 @@ const en: Strings = {
     paidDisclaimer: (operator) =>
       `Tapping "Mark as paid" only dismisses this reminder — Toll Alert does not verify payment with ${operator}. You’re responsible for actually paying.`,
     verified: (operator, date) =>
-      `Figures verified against ${operator} on ${date} — rates change often, confirm at the payment link before relying on this.`,
+      `Details verified against ${operator} on ${date} — they can change, so confirm on the official payment site.`,
     openPayment: 'TAP TO PAY — official site',
     antiScam: (operator) =>
       `This button only ever opens ${operator}’s official website — never a copycat site that adds its own fees.`,
@@ -406,7 +406,7 @@ const fr: Strings = {
     paidDisclaimer: (operator) =>
       `Toucher « Marquer comme payé » ferme seulement ce rappel — Toll Alert ne vérifie pas le paiement auprès de ${operator}. C’est à vous de payer réellement.`,
     verified: (operator, date) =>
-      `Montants vérifiés auprès de ${operator} le ${date} — les tarifs changent souvent, confirmez sur le lien de paiement.`,
+      `Informations vérifiées auprès de ${operator} le ${date} — elles peuvent changer, confirmez sur le lien de paiement.`,
     openPayment: 'TOUCHEZ POUR PAYER — site officiel',
     antiScam: (operator) =>
       `Ce bouton ouvre uniquement le site officiel de ${operator} — jamais un faux site qui ajoute ses propres frais.`,
@@ -560,7 +560,7 @@ const de: Strings = {
     paidDisclaimer: (operator) =>
       `„Als bezahlt markieren“ schließt nur diese Erinnerung — Toll Alert prüft die Zahlung nicht bei ${operator}. Sie sind selbst für die Zahlung verantwortlich.`,
     verified: (operator, date) =>
-      `Beträge am ${date} bei ${operator} geprüft — Tarife ändern sich oft, bitte über den Zahlungslink bestätigen.`,
+      `Angaben am ${date} bei ${operator} geprüft — sie können sich ändern, bitte über den Zahlungslink bestätigen.`,
     openPayment: 'TIPPEN ZUM BEZAHLEN — offizielle Website',
     antiScam: (operator) =>
       `Diese Schaltfläche öffnet nur die offizielle Website von ${operator} — nie eine Nachahmer-Seite mit eigenen Gebühren.`,
@@ -714,7 +714,7 @@ const es: Strings = {
     paidDisclaimer: (operator) =>
       `Tocar «Marcar como pagado» solo cierra este recordatorio: Toll Alert no verifica el pago con ${operator}. Usted es responsable de pagar.`,
     verified: (operator, date) =>
-      `Importes verificados con ${operator} el ${date}; las tarifas cambian a menudo, confírmelo en el enlace de pago.`,
+      `Datos verificados con ${operator} el ${date}; pueden cambiar, confírmelo en el enlace de pago.`,
     openPayment: 'TOQUE PARA PAGAR — web oficial',
     antiScam: (operator) =>
       `Este botón solo abre la web oficial de ${operator}, nunca una web imitadora que añade sus propias comisiones.`,
@@ -868,7 +868,7 @@ const pl: Strings = {
     paidDisclaimer: (operator) =>
       `„Oznacz jako opłacone” tylko zamyka to przypomnienie — Toll Alert nie weryfikuje płatności w ${operator}. To ty odpowiadasz za zapłatę.`,
     verified: (operator, date) =>
-      `Kwoty sprawdzone u ${operator} dnia ${date} — stawki często się zmieniają, potwierdź je na stronie płatności.`,
+      `Informacje sprawdzone u ${operator} dnia ${date} — mogą się zmienić, potwierdź je na stronie płatności.`,
     openPayment: 'DOTKNIJ, ABY ZAPŁACIĆ — oficjalna strona',
     antiScam: (operator) =>
       `Ten przycisk otwiera wyłącznie oficjalną stronę ${operator} — nigdy podróbki doliczającej własne opłaty.`,
@@ -1022,7 +1022,7 @@ const ro: Strings = {
     paidDisclaimer: (operator) =>
       `„Marchează ca plătit” doar închide această reamintire — Toll Alert nu verifică plata la ${operator}. Sunteți responsabil să plătiți efectiv.`,
     verified: (operator, date) =>
-      `Sume verificate la ${operator} pe ${date} — tarifele se schimbă des, confirmați la linkul de plată.`,
+      `Informații verificate la ${operator} pe ${date} — se pot schimba, confirmați la linkul de plată.`,
     openPayment: 'ATINGEȚI PENTRU A PLĂTI — site oficial',
     antiScam: (operator) =>
       `Acest buton deschide doar site-ul oficial ${operator} — niciodată un site imitație care adaugă propriile comisioane.`,

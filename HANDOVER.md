@@ -952,3 +952,17 @@ with Settings → Diagnostics → Share log), car-rental QR partnerships.
   the audited figure: £128.4m in Dart Charge penalty income in 2024-25, more than the £126.5m the toll
   raised (National Highways accounts). `FineStat.count` is now optional; a card without one leads with £.
 - Landing alert preview said "Pay £2.50"; the Dartford car charge is £3.50. Fixed.
+
+### 2026-10-21 — Rob's follow-ups (live on Pages)
+- Landing page: the per-scheme fines cards are replaced by one red line, "TOLL FINES FOR 2025 OVER
+  £450,000,000", fading every 3s (static under Reduce Motion). Year and total are constants in
+  `src/config/fineStats.ts`. English only, no source wording yet — Sam to decide. The old per-scheme
+  figures and their sources are in git history (`fineStats.ts` before `71687bf`).
+- No crossing charge amounts anywhere in the UI: alert and reminder text, the alert preview, Home and
+  Settings lists, the crossing detail screen (charge line and "If unpaid" fine stages removed). Rates
+  remain in `crossings.ts` but nothing displays them.
+- The "One wrong turn" ULEZ page is gone; page 2 is now the alert preview (`AlertPreviewScreen`).
+- Web tab title said "undefined" (React Navigation's default title before the first screen mounts);
+  now "Toll Alert".
+- The permission steps on the web mockup follow the visitor's browser, so iPhone visitors no longer
+  see the Android "Allow all the time" wording.
