@@ -966,3 +966,8 @@ with Settings → Diagnostics → Share log), car-rental QR partnerships.
   now "Toll Alert".
 - The permission steps on the web mockup follow the visitor's browser, so iPhone visitors no longer
   see the Android "Allow all the time" wording.
+- Landing total now reads "£450 MILLION"; the page-2 alert preview text is a size larger.
+- Website only: the last page ("One last thing") shows **PRESS TO DOWNLOAD FREE** instead of "Turn on
+  crossing alerts". With `PLAY_STORE_URL` / `APP_STORE_URL` in `src/config/release.ts` still null it
+  shows a "Coming soon" note; set them when the listings go live and it opens the store for the
+  visitor's phone. The Android and iOS apps are unchanged.

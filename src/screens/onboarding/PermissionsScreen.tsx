@@ -1,10 +1,11 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import { Alert, Platform, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { colors, spacing } from '../../theme';
+import { APP_STORE_URL, PLAY_STORE_URL } from '../../config/release';
+import { colors, radii, spacing } from '../../theme';
 import { OnboardingStackParamList } from '../../navigation/types';
 import { useAppState } from '../../state/AppState';
 import { Segment, useLanguage } from '../../i18n';
@@ -78,6 +79,37 @@ function showsAndroidSteps(): boolean {
   return Platform.OS === 'android';
 }
 
+/**
+ * The website's version of this page sells the app instead of arming it — a
+ * browser can't detect crossings. Opens the store for the visitor's phone,
+ * or says "coming soon" until the listings exist (src/config/release.ts).
+ */
+function DownloadActions({ onSkip, skipLabel }: { onSkip: () => void; skipLabel: string }) {
+  const [comingSoon, setComingSoon] = useState(false);
+  const download = () => {
+    const url = showsAndroidSteps() ? PLAY_STORE_URL : APP_STORE_URL;
+    if (url) {
+      Linking.openURL(url);
+    } else {
+      setComingSoon(true);
+    }
+  };
+  return (
+    <View style={styles.actions}>
+      {comingSoon && (
+        <View style={styles.comingSoon}>
+          <Text style={styles.comingSoonTitle}>Coming soon</Text>
+          <Text style={styles.comingSoonBody}>
+            Toll Alert will be free to download on Google Play and the App Store shortly.
+          </Text>
+        </View>
+      )}
+      <PrimaryButton label="PRESS TO DOWNLOAD FREE" onPress={download} />
+      <PrimaryButton label={skipLabel} variant="secondary" onPress={onSkip} />
+    </View>
+  );
+}
+
 export function PermissionsScreen(_props: Props) {
   const { completeOnboarding, setBackgroundMonitoringEnabled } = useAppState();
   const [working, setWorking] = useState(false);
@@ -125,15 +157,19 @@ export function PermissionsScreen(_props: Props) {
           <Text style={styles.cardFootnote}>{t.permissions.footnote}</Text>
         </Card>
       </View>
-      <View style={styles.actions}>
-        <Text style={styles.note}>{t.permissions.note}</Text>
-        <PrimaryButton
-          label={working ? t.permissions.settingUp : t.permissions.turnOn}
-          onPress={enableThenContinue}
-          disabled={working}
-        />
-        <PrimaryButton label={t.permissions.notNow} variant="secondary" onPress={completeOnboarding} disabled={working} />
-      </View>
+      {Platform.OS === 'web' ? (
+        <DownloadActions onSkip={completeOnboarding} skipLabel={t.permissions.notNow} />
+      ) : (
+        <View style={styles.actions}>
+          <Text style={styles.note}>{t.permissions.note}</Text>
+          <PrimaryButton
+            label={working ? t.permissions.settingUp : t.permissions.turnOn}
+            onPress={enableThenContinue}
+            disabled={working}
+          />
+          <PrimaryButton label={t.permissions.notNow} variant="secondary" onPress={completeOnboarding} disabled={working} />
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -221,4 +257,14 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontStyle: 'italic',
   },
+  comingSoon: {
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    padding: spacing.md,
+    gap: 4,
+  },
+  comingSoonTitle: { fontSize: 17, fontWeight: '900', color: colors.primary, textAlign: 'center' },
+  comingSoonBody: { fontSize: 14, color: colors.text, textAlign: 'center', lineHeight: 20 },
 });
