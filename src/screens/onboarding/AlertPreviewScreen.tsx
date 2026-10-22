@@ -11,7 +11,7 @@ import { OnboardingStackParamList } from '../../navigation/types';
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'AlertPreview'>;
 
 /**
- * Page 2 of onboarding: what the Dartford alert looks like. Replaces the old
+ * Page 3 of onboarding: what the Dartford alert looks like. Replaces the old
  * "One wrong turn" ULEZ page at the client's request (2026-10, via Rob); the
  * preview used to sit at the bottom of the landing page.
  */
@@ -19,13 +19,14 @@ export function AlertPreviewScreen({ navigation }: Props) {
   const { t } = useLanguage();
   return (
     <View style={styles.root}>
-      <ScrollView contentContainerStyle={styles.scroll} bounces={false}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scroll} bounces={false}>
         <SafeAreaView edges={['top']} style={styles.topRow}>
           <View style={styles.brandRow}>
             <Logo size={28} />
             <Text style={styles.brandText}>Toll Alert</Text>
           </View>
           <View style={styles.progressDots}>
+            <View style={styles.progressDot} />
             <View style={styles.progressDot} />
             <View style={[styles.progressDot, styles.progressDotActive]} />
           </View>
@@ -61,6 +62,7 @@ export function AlertPreviewScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
+  scrollView: { flex: 1 },
   scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
   topRow: {
     flexDirection: 'row',

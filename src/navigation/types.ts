@@ -1,5 +1,6 @@
 export type OnboardingStackParamList = {
   Welcome: undefined;
+  TollsCovered: undefined;
   AlertPreview: undefined;
   HowItWorks: undefined;
   Disclaimer: undefined;
