@@ -5,12 +5,23 @@ import { FinesTotalBox } from '../../components/FinesTotalBox';
 import { LanguageButton } from '../../components/LanguagePicker';
 import { Logo } from '../../components/Logo';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { MOCK_CROSSINGS_CONFIG } from '../../config/crossings';
 import { SUBSCRIPTIONS_ENABLED } from '../../config/release';
 import { useLanguage } from '../../i18n';
-import { colors, spacing } from '../../theme';
+import { colors, radii, spacing } from '../../theme';
 import { OnboardingStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'Welcome'>;
+
+/**
+ * Every crossing the app watches, by name only (no prices — those can go out
+ * of date). Read from the crossings config so a new toll appears here too.
+ * Drops an operator in brackets ("Dartford Crossing (Dart Charge)") but keeps
+ * an acronym ("Ultra Low Emission Zone (ULEZ)").
+ */
+const TOLLS_COVERED = MOCK_CROSSINGS_CONFIG.crossings.map((c) =>
+  c.name.replace(/\s*\(([^)]*)\)/, (bracket, inner: string) => (/[a-z]/.test(inner) ? '' : bracket))
+);
 
 /**
  * The landing page — also what the GitHub Pages web mockup opens on.
@@ -43,6 +54,17 @@ export function WelcomeScreen({ navigation }: Props) {
 
         <View style={styles.statWrap}>
           <FinesTotalBox />
+        </View>
+
+        <View style={styles.tollsSection}>
+          <Text style={styles.tollsTitle}>{t.welcome.tollsCovered}</Text>
+          <View style={styles.tollsList}>
+            {TOLLS_COVERED.map((name) => (
+              <View key={name} style={styles.tollChip}>
+                <Text style={styles.tollChipText}>{name}</Text>
+              </View>
+            ))}
+          </View>
         </View>
 
       </ScrollView>
@@ -91,6 +113,36 @@ const styles = StyleSheet.create({
   },
   statWrap: {
     marginTop: spacing.md,
+  },
+  tollsSection: {
+    marginTop: spacing.lg,
+    gap: spacing.sm,
+  },
+  tollsTitle: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: colors.primary,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
+  tollsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  tollChip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.lg,
+    paddingVertical: 6,
+    paddingHorizontal: spacing.sm,
+  },
+  tollChipText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
   },
   footer: {
     paddingHorizontal: spacing.lg,

@@ -975,3 +975,6 @@ with Settings → Diagnostics → Share log), car-rental QR partnerships.
   the exact button to tap shown as a yellow chip, plain English wording, larger text. Applies to the
   apps and the website. Only the English wording was rewritten; the other five languages keep their
   existing (longer) steps but get the same A/B/C layout and chips.
+- Landing page: "TOLLS WE COVER" list under the £450 MILLION box — every crossing by name, no prices,
+  read from `crossings.ts` so new tolls appear automatically. The per-scheme fines cards used to
+  name them; this puts the names back.

@@ -44,6 +44,7 @@ export interface Strings {
   };
   welcome: {
     headline: string;
+    tollsCovered: string;
     alertPreviewTitle: string;
     alertNow: string;
     alertTitle: (name: string) => string;
@@ -148,6 +149,7 @@ const en: Strings = {
   },
   welcome: {
     headline: 'Never forget a UK road charge again',
+    tollsCovered: 'TOLLS WE COVER',
     alertPreviewTitle: 'This is what the alert looks like',
     alertNow: 'now',
     alertTitle: (name) => `${name} detected — TAP TO PAY`,
@@ -297,6 +299,7 @@ const fr: Strings = {
   },
   welcome: {
     headline: 'N’oubliez plus jamais un péage routier britannique',
+    tollsCovered: 'PÉAGES COUVERTS',
     alertPreviewTitle: 'Voici à quoi ressemble l’alerte',
     alertNow: 'maintenant',
     alertTitle: (name) => `${name} détecté — TOUCHEZ POUR PAYER`,
@@ -451,6 +454,7 @@ const de: Strings = {
   },
   welcome: {
     headline: 'Nie wieder eine britische Straßengebühr vergessen',
+    tollsCovered: 'ABGEDECKTE MAUTSTELLEN',
     alertPreviewTitle: 'So sieht die Benachrichtigung aus',
     alertNow: 'jetzt',
     alertTitle: (name) => `${name} erkannt — TIPPEN ZUM BEZAHLEN`,
@@ -605,6 +609,7 @@ const es: Strings = {
   },
   welcome: {
     headline: 'No vuelva a olvidar un peaje en el Reino Unido',
+    tollsCovered: 'PEAJES CUBIERTOS',
     alertPreviewTitle: 'Así es la alerta',
     alertNow: 'ahora',
     alertTitle: (name) => `${name} detectado — TOQUE PARA PAGAR`,
@@ -759,6 +764,7 @@ const pl: Strings = {
   },
   welcome: {
     headline: 'Już nigdy nie zapomnisz o opłacie drogowej w Wielkiej Brytanii',
+    tollsCovered: 'OBSŁUGIWANE OPŁATY',
     alertPreviewTitle: 'Tak wygląda powiadomienie',
     alertNow: 'teraz',
     alertTitle: (name) => `Wykryto: ${name} — DOTKNIJ, ABY ZAPŁACIĆ`,
@@ -913,6 +919,7 @@ const ro: Strings = {
   },
   welcome: {
     headline: 'Nu mai uitați niciodată o taxă rutieră în Regatul Unit',
+    tollsCovered: 'TAXE ACOPERITE',
     alertPreviewTitle: 'Așa arată alerta',
     alertNow: 'acum',
     alertTitle: (name) => `${name} detectat — ATINGEȚI PENTRU A PLĂTI`,
