@@ -50,7 +50,8 @@ function Step({ index, children, isLast }: { index: number; children: React.Reac
  * covering the screen — and because step 2 on Android is the one people miss.
  * The wording is in src/i18n/strings.ts (`permissions.iosSteps` /
  * `androidSteps`); bold segments are the OS's own button names, drawn as a
- * yellow button-like chip so they can be matched to the screen by eye.
+ * yellow button-like chip so they can be matched to the screen by eye. A chip
+ * only wraps after a "→", so a long translated path still fits a small phone.
  *
  * Android 11+ does NOT show a dialog for background location:
  * expo-location's `requestBackgroundPermissionsAsync` opens the system
@@ -62,7 +63,7 @@ function renderSteps(steps: Segment[][]): React.ReactNode[] {
     segments.map((segment, i) =>
       segment.bold ? (
         <Text key={i} style={styles.osButton}>
-          {`\u00A0${segment.text.replace(/^"|"$/g, '').replace(/ /g, '\u00A0')}\u00A0`}
+          {`\u00A0${segment.text.replace(/^"|"$/g, '').replace(/ /g, '\u00A0').replace(/→\u00A0/g, '→ ')}\u00A0`}
         </Text>
       ) : (
         segment.text
