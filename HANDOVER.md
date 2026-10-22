@@ -955,7 +955,7 @@ with Settings → Diagnostics → Share log), car-rental QR partnerships.
 
 ### 2026-10-21 — Rob's follow-ups (live on Pages)
 - Landing page: the per-scheme fines cards are replaced by one red line, "TOLL FINES FOR 2025 OVER
-  £450,000,000", fading every 3s (static under Reduce Motion). Year and total are constants in
+  £450 MILLION", fading every 3s (static under Reduce Motion). Year and total are constants in
   `src/config/fineStats.ts`. English only, no source wording yet — Sam to decide. The old per-scheme
   figures and their sources are in git history (`fineStats.ts` before `71687bf`).
 - No crossing charge amounts anywhere in the UI: alert and reminder text, the alert preview, Home and

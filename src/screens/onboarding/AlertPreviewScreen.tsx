@@ -35,7 +35,7 @@ export function AlertPreviewScreen({ navigation }: Props) {
           <Text style={styles.previewTitle}>🔔 {t.welcome.alertPreviewTitle}</Text>
           <View style={styles.notificationCard}>
             <View style={styles.notificationIcon}>
-              <Logo size={30} />
+              <Logo size={36} />
             </View>
             <View style={{ flex: 1 }}>
               <View style={styles.notificationHeaderRow}>
@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   previewTitle: {
-    fontSize: 15,
+    fontSize: 19,
     fontWeight: '800',
     color: colors.text,
   },
@@ -103,8 +103,8 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   notificationIcon: {
-    width: 34,
-    height: 34,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -113,37 +113,37 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   notificationApp: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '800',
     color: colors.textOnDarkMuted,
     letterSpacing: 0.5,
   },
   notificationTime: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textOnDarkMuted,
   },
   notificationTitle: {
-    fontSize: 14,
+    fontSize: 18,
     fontWeight: '700',
     color: colors.textOnDark,
     marginTop: 2,
   },
   notificationBody: {
-    fontSize: 13,
+    fontSize: 16,
     color: colors.textOnDarkMuted,
-    marginTop: 2,
-    lineHeight: 18,
+    marginTop: 4,
+    lineHeight: 22,
   },
   tapToPay: {
     alignSelf: 'flex-start',
     marginTop: spacing.sm,
-    paddingVertical: 4,
-    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    paddingHorizontal: spacing.md,
     borderRadius: radii.sm,
     backgroundColor: colors.primary,
   },
   tapToPayText: {
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: '900',
     color: colors.ink,
     letterSpacing: 0.5,
