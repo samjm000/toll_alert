@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Logo } from '../../components/Logo';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { FOOTER_IN_SCROLL, footerScrollContent, footerSpacer } from '../../components/webFooter';
 import { MOCK_CROSSINGS_CONFIG } from '../../config/crossings';
 import { useLanguage } from '../../i18n';
 import { colors, radii, spacing } from '../../theme';
@@ -30,9 +31,19 @@ const TOLLS_COVERED = MOCK_CROSSINGS_CONFIG.crossings.map((c) => ({
  */
 export function TollsCoveredScreen({ navigation }: Props) {
   const { t } = useLanguage();
+  const footer = (
+    <SafeAreaView style={[styles.footer, FOOTER_IN_SCROLL && styles.footerInScroll]} edges={['bottom']}>
+      <PrimaryButton label={t.howItWorks.continue} onPress={() => navigation.navigate('AlertPreview')} />
+    </SafeAreaView>
+  );
+
   return (
     <View style={styles.root}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scroll} bounces={false}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scroll, footerScrollContent]}
+        bounces={false}
+      >
         <SafeAreaView edges={['top']} style={styles.topRow}>
           <View style={styles.brandRow}>
             <Logo size={28} />
@@ -54,11 +65,15 @@ export function TollsCoveredScreen({ navigation }: Props) {
             </View>
           ))}
         </View>
+        {FOOTER_IN_SCROLL && (
+          <>
+            <View style={footerSpacer} />
+            {footer}
+          </>
+        )}
       </ScrollView>
 
-      <SafeAreaView style={styles.footer} edges={['bottom']}>
-        <PrimaryButton label={t.howItWorks.continue} onPress={() => navigation.navigate('AlertPreview')} />
-      </SafeAreaView>
+      {!FOOTER_IN_SCROLL && footer}
     </View>
   );
 }
@@ -102,6 +117,7 @@ const styles = StyleSheet.create({
   },
   rowIcon: { fontSize: 16, color: colors.primary, width: 22, textAlign: 'center' },
   rowName: { flex: 1, fontSize: 17, fontWeight: '700', color: colors.text },
+  footerInScroll: { paddingHorizontal: 0, marginTop: spacing.md },
   footer: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,

@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { FOOTER_IN_SCROLL, footerScrollContent, footerSpacer } from '../../components/webFooter';
 import { useLanguage } from '../../i18n';
 import { colors, spacing } from '../../theme';
 import { OnboardingStackParamList } from '../../navigation/types';
@@ -19,9 +20,11 @@ type Props = NativeStackScreenProps<OnboardingStackParamList, 'HowItWorks'>;
  */
 export function HowItWorksScreen({ navigation }: Props) {
   const { t } = useLanguage();
+  const footer = <PrimaryButton label={t.howItWorks.continue} onPress={() => navigation.navigate('Disclaimer')} />;
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={[styles.scroll, footerScrollContent]}>
         <Text style={styles.title}>{t.howItWorks.title}</Text>
         <Text style={styles.avoidFines}>{t.common.avoidFines}</Text>
         {t.howItWorks.steps.map((step, i) => (
@@ -37,8 +40,14 @@ export function HowItWorksScreen({ navigation }: Props) {
             </View>
           </Card>
         ))}
+        {FOOTER_IN_SCROLL && (
+          <>
+            <View style={footerSpacer} />
+            {footer}
+          </>
+        )}
       </ScrollView>
-      <PrimaryButton label={t.howItWorks.continue} onPress={() => navigation.navigate('Disclaimer')} />
+      {!FOOTER_IN_SCROLL && footer}
     </SafeAreaView>
   );
 }
@@ -49,6 +58,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     padding: spacing.lg,
   },
+  scrollView: { flex: 1 },
   scroll: {
     gap: spacing.md,
     paddingBottom: spacing.lg,

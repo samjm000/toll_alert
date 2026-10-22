@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Flashing } from '../../components/Flashing';
 import { Logo } from '../../components/Logo';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { FOOTER_IN_SCROLL, footerScrollContent, footerSpacer } from '../../components/webFooter';
 import { useLanguage } from '../../i18n';
 import { colors, radii, spacing } from '../../theme';
 import { OnboardingStackParamList } from '../../navigation/types';
@@ -17,9 +18,19 @@ type Props = NativeStackScreenProps<OnboardingStackParamList, 'AlertPreview'>;
  */
 export function AlertPreviewScreen({ navigation }: Props) {
   const { t } = useLanguage();
+  const footer = (
+    <SafeAreaView style={[styles.footer, FOOTER_IN_SCROLL && styles.footerInScroll]} edges={['bottom']}>
+      <PrimaryButton label={t.alertPreview.getStarted} onPress={() => navigation.navigate('HowItWorks')} />
+    </SafeAreaView>
+  );
+
   return (
     <View style={styles.root}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scroll} bounces={false}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scroll, footerScrollContent]}
+        bounces={false}
+      >
         <SafeAreaView edges={['top']} style={styles.topRow}>
           <View style={styles.brandRow}>
             <Logo size={28} />
@@ -51,11 +62,15 @@ export function AlertPreviewScreen({ navigation }: Props) {
             </View>
           </View>
         </View>
+        {FOOTER_IN_SCROLL && (
+          <>
+            <View style={footerSpacer} />
+            {footer}
+          </>
+        )}
       </ScrollView>
 
-      <SafeAreaView style={styles.footer} edges={['bottom']}>
-        <PrimaryButton label={t.alertPreview.getStarted} onPress={() => navigation.navigate('HowItWorks')} />
-      </SafeAreaView>
+      {!FOOTER_IN_SCROLL && footer}
     </View>
   );
 }
@@ -84,6 +99,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.text,
   },
+  footerInScroll: { paddingHorizontal: 0, marginTop: spacing.md },
   footer: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,

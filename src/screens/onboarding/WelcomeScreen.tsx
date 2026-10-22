@@ -5,6 +5,7 @@ import { FinesTotalBox } from '../../components/FinesTotalBox';
 import { LanguageButton } from '../../components/LanguagePicker';
 import { Logo } from '../../components/Logo';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { FOOTER_IN_SCROLL, footerScrollContent, footerSpacer } from '../../components/webFooter';
 import { LANGUAGES_ENABLED, SUBSCRIPTIONS_ENABLED } from '../../config/release';
 import { useLanguage } from '../../i18n';
 import { colors, spacing } from '../../theme';
@@ -25,9 +26,20 @@ type Props = NativeStackScreenProps<OnboardingStackParamList, 'Welcome'>;
 export function WelcomeScreen({ navigation }: Props) {
   const { t } = useLanguage();
 
+  const footer = (
+    <SafeAreaView style={[styles.footer, FOOTER_IN_SCROLL && styles.footerInScroll]} edges={['bottom']}>
+      <PrimaryButton label={t.welcome.download} onPress={() => navigation.navigate('TollsCovered')} />
+      {SUBSCRIPTIONS_ENABLED && <Text style={styles.footerSubtext}>{t.welcome.subscribe}</Text>}
+    </SafeAreaView>
+  );
+
   return (
     <View style={styles.root}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scroll} bounces={false}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scroll, footerScrollContent]}
+        bounces={false}
+      >
         <SafeAreaView edges={['top']} style={styles.topRow}>
           {LANGUAGES_ENABLED ? <LanguageButton /> : <View />}
           <View style={styles.progressDots}>
@@ -46,12 +58,15 @@ export function WelcomeScreen({ navigation }: Props) {
         <View style={styles.statWrap}>
           <FinesTotalBox />
         </View>
+        {FOOTER_IN_SCROLL && (
+          <>
+            <View style={footerSpacer} />
+            {footer}
+          </>
+        )}
       </ScrollView>
 
-      <SafeAreaView style={styles.footer} edges={['bottom']}>
-        <PrimaryButton label={t.welcome.download} onPress={() => navigation.navigate('TollsCovered')} />
-        {SUBSCRIPTIONS_ENABLED && <Text style={styles.footerSubtext}>{t.welcome.subscribe}</Text>}
-      </SafeAreaView>
+      {!FOOTER_IN_SCROLL && footer}
     </View>
   );
 }
@@ -94,6 +109,7 @@ const styles = StyleSheet.create({
   statWrap: {
     marginTop: spacing.md,
   },
+  footerInScroll: { paddingHorizontal: 0, marginTop: spacing.md },
   footer: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,

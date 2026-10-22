@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { FOOTER_IN_SCROLL, footerScrollContent, footerSpacer } from '../../components/webFooter';
 import { useLanguage } from '../../i18n';
 import { colors, spacing } from '../../theme';
 import { OnboardingStackParamList } from '../../navigation/types';
@@ -23,10 +24,17 @@ type Props = NativeStackScreenProps<OnboardingStackParamList, 'Disclaimer'>;
 export function DisclaimerScreen({ navigation }: Props) {
   const { t } = useLanguage();
   const [accepted, setAccepted] = useState(false);
+  const footer = (
+    <PrimaryButton
+      label={t.disclaimer.understand}
+      disabled={!accepted}
+      onPress={() => navigation.navigate('Permissions')}
+    />
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={[styles.scroll, footerScrollContent]}>
         <Text style={styles.title}>{t.disclaimer.title}</Text>
         <Card>
           <Text style={styles.disclaimerText}>{t.disclaimer.text}</Text>
@@ -43,13 +51,15 @@ export function DisclaimerScreen({ navigation }: Props) {
           </View>
           <Text style={styles.checkboxLabel}>{t.disclaimer.checkbox}</Text>
         </Pressable>
+        {FOOTER_IN_SCROLL && (
+          <>
+            <View style={footerSpacer} />
+            {footer}
+          </>
+        )}
       </ScrollView>
 
-      <PrimaryButton
-        label={t.disclaimer.understand}
-        disabled={!accepted}
-        onPress={() => navigation.navigate('Permissions')}
-      />
+      {!FOOTER_IN_SCROLL && footer}
     </SafeAreaView>
   );
 }
@@ -60,6 +70,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     padding: spacing.lg,
   },
+  scrollView: { flex: 1 },
   scroll: {
     gap: spacing.lg,
     paddingBottom: spacing.lg,

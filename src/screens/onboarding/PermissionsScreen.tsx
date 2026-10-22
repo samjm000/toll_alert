@@ -1,9 +1,10 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import { Alert, Linking, Platform, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '../../components/Card';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { FOOTER_IN_SCROLL, footerScrollContent, footerSpacer } from '../../components/webFooter';
 import { APP_STORE_URL, PLAY_STORE_URL } from '../../config/release';
 import { colors, radii, spacing } from '../../theme';
 import { OnboardingStackParamList } from '../../navigation/types';
@@ -147,34 +148,45 @@ export function PermissionsScreen(_props: Props) {
     }
   };
 
+  const footer =
+    Platform.OS === 'web' ? (
+      <DownloadActions onSkip={completeOnboarding} skipLabel={t.permissions.notNow} />
+    ) : (
+      <View style={styles.actions}>
+        <Text style={styles.note}>{t.permissions.note}</Text>
+        <PrimaryButton
+          label={working ? t.permissions.settingUp : t.permissions.turnOn}
+          onPress={enableThenContinue}
+          disabled={working}
+        />
+        <PrimaryButton label={t.permissions.notNow} variant="secondary" onPress={completeOnboarding} disabled={working} />
+      </View>
+    );
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.content}>
-        <Text style={styles.title}>{t.permissions.title}</Text>
-        <Text style={styles.body}>{t.permissions.body}</Text>
-        <Card>
-          <Text style={styles.cardTitle}>{t.permissions.cardTitle}</Text>
-          {steps.map((step, index) => (
-            <Step key={index} index={index} isLast={index === steps.length - 1}>
-              {step}
-            </Step>
-          ))}
-          <Text style={styles.cardFootnote}>{t.permissions.footnote}</Text>
-        </Card>
-      </View>
-      {Platform.OS === 'web' ? (
-        <DownloadActions onSkip={completeOnboarding} skipLabel={t.permissions.notNow} />
-      ) : (
-        <View style={styles.actions}>
-          <Text style={styles.note}>{t.permissions.note}</Text>
-          <PrimaryButton
-            label={working ? t.permissions.settingUp : t.permissions.turnOn}
-            onPress={enableThenContinue}
-            disabled={working}
-          />
-          <PrimaryButton label={t.permissions.notNow} variant="secondary" onPress={completeOnboarding} disabled={working} />
+      <ScrollView style={styles.scrollView} contentContainerStyle={[styles.scrollContent, footerScrollContent]}>
+        <View style={styles.content}>
+          <Text style={styles.title}>{t.permissions.title}</Text>
+          <Text style={styles.body}>{t.permissions.body}</Text>
+          <Card>
+            <Text style={styles.cardTitle}>{t.permissions.cardTitle}</Text>
+            {steps.map((step, index) => (
+              <Step key={index} index={index} isLast={index === steps.length - 1}>
+                {step}
+              </Step>
+            ))}
+            <Text style={styles.cardFootnote}>{t.permissions.footnote}</Text>
+          </Card>
         </View>
-      )}
+        {FOOTER_IN_SCROLL && (
+          <>
+            <View style={footerSpacer} />
+            {footer}
+          </>
+        )}
+      </ScrollView>
+      {!FOOTER_IN_SCROLL && footer}
     </SafeAreaView>
   );
 }
@@ -184,8 +196,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     padding: spacing.lg,
-    justifyContent: 'space-between',
   },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingBottom: spacing.md },
   content: {
     gap: spacing.md,
   },

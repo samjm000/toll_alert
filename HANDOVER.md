@@ -983,3 +983,7 @@ with Settings → Diagnostics → Share log), car-rental QR partnerships.
   Sam's call; not solicitor-reviewed. App and website are English only (`LANGUAGES_ENABLED = false`
   in `src/config/release.ts`): no language picker, stored/device languages ignored. The other five
   languages stay in `strings.ts` with the OLD disclaimer — update it before switching them back on.
+- 2026-10-22: on Rob's iPhone (iOS 26 Safari, floating toolbar) the bottom buttons were hidden under
+  the browser bar and the page couldn't scroll. On the web, onboarding footers now sit at the end of
+  the scrolling content with 120px of room below them on iPhone/iPad (`src/components/webFooter.ts`).
+  Native apps keep pinned footers; "One last thing" now scrolls on small phones too.
