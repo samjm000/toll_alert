@@ -28,12 +28,15 @@ type Props = NativeStackScreenProps<OnboardingStackParamList, 'Permissions'>;
  * Still opt-in: the prompt only happens off a deliberate button press, and
  * "Not now" leaves everything off with the Settings toggle unchanged.
  */
-/** One numbered instruction, badge plus text, in the "What happens next" card. */
-function Step({ number, children, isLast }: { number: number; children: React.ReactNode; isLast: boolean }) {
+/**
+ * One lettered instruction (A, B, C), badge plus text. Client ask (2026-10,
+ * via Rob): make this page easier to follow, "kind of A, B, C".
+ */
+function Step({ index, children, isLast }: { index: number; children: React.ReactNode; isLast: boolean }) {
   return (
     <View style={[styles.step, isLast && styles.stepLast]}>
       <View style={styles.stepBadge}>
-        <Text style={styles.stepBadgeText}>{number}</Text>
+        <Text style={styles.stepBadgeText}>{String.fromCharCode(65 + index)}</Text>
       </View>
       <Text style={styles.stepText}>{children}</Text>
     </View>
@@ -46,7 +49,8 @@ function Step({ number, children, isLast }: { number: number; children: React.Re
  * because a non-technical tester has to follow them while system dialogs are
  * covering the screen — and because step 2 on Android is the one people miss.
  * The wording is in src/i18n/strings.ts (`permissions.iosSteps` /
- * `androidSteps`); bold segments are the OS's own button names.
+ * `androidSteps`); bold segments are the OS's own button names, drawn as a
+ * yellow button-like chip so they can be matched to the screen by eye.
  *
  * Android 11+ does NOT show a dialog for background location:
  * expo-location's `requestBackgroundPermissionsAsync` opens the system
@@ -57,8 +61,8 @@ function renderSteps(steps: Segment[][]): React.ReactNode[] {
   return steps.map((segments) =>
     segments.map((segment, i) =>
       segment.bold ? (
-        <Text key={i} style={styles.bold}>
-          {segment.text}
+        <Text key={i} style={styles.osButton}>
+          {`\u00A0${segment.text.replace(/^"|"$/g, '').replace(/ /g, '\u00A0')}\u00A0`}
         </Text>
       ) : (
         segment.text
@@ -150,7 +154,7 @@ export function PermissionsScreen(_props: Props) {
         <Card>
           <Text style={styles.cardTitle}>{t.permissions.cardTitle}</Text>
           {steps.map((step, index) => (
-            <Step key={index} number={index + 1} isLast={index === steps.length - 1}>
+            <Step key={index} index={index} isLast={index === steps.length - 1}>
               {step}
             </Step>
           ))}
@@ -197,26 +201,26 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   stepBadge: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: colors.primarySoftBg,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     // Nudges the badge onto the text's first-line baseline rather than the
     // top of its line box, which otherwise reads as slightly too high.
-    marginTop: 1,
+    marginTop: -2,
   },
   stepBadgeText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: colors.primary,
+    fontSize: 17,
+    fontWeight: '900',
+    color: colors.ink,
   },
   stepText: {
     flex: 1,
-    fontSize: 14,
-    color: colors.textMuted,
-    lineHeight: 20,
+    fontSize: 16,
+    color: colors.text,
+    lineHeight: 26,
   },
   cardFootnote: {
     fontSize: 12,
@@ -248,9 +252,11 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     lineHeight: 20,
   },
-  bold: {
-    fontWeight: '700',
-    color: colors.text,
+  osButton: {
+    fontWeight: '800',
+    color: colors.ink,
+    backgroundColor: colors.primary,
+    borderRadius: 6,
   },
   note: {
     fontSize: 12,

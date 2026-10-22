@@ -971,3 +971,7 @@ with Settings → Diagnostics → Share log), car-rental QR partnerships.
   crossing alerts". With `PLAY_STORE_URL` / `APP_STORE_URL` in `src/config/release.ts` still null it
   shows a "Coming soon" note; set them when the listings go live and it opens the store for the
   visitor's phone. The Android and iOS apps are unchanged.
+- "One last thing" (permissions) page simplified at Rob's request, "kind of A, B, C": lettered steps,
+  the exact button to tap shown as a yellow chip, plain English wording, larger text. Applies to the
+  apps and the website. Only the English wording was rewritten; the other five languages keep their
+  existing (longer) steps but get the same A/B/C layout and chips.
