@@ -203,12 +203,12 @@ const en: Strings = {
     body: 'Three quick steps let Toll Alert warn you about a toll, even when your phone is in your pocket.',
     cardTitle: 'Do these in order',
     iosSteps: [
-      [{ text: 'As you start using Toll Alert, your phone will ask about your location. Tap ' }, { text: 'Allow While Using App', bold: true }],
+      [{ text: 'When your phone asks about your location, tap ' }, { text: 'Allow While Using App', bold: true }],
       [{ text: 'Your phone asks again. Tap ' }, { text: 'Change to Always Allow', bold: true }],
       [{ text: 'When it asks about notifications, tap ' }, { text: 'Allow', bold: true }, { text: ' — that’s how the alert reaches you.' }],
     ],
     androidSteps: [
-      [{ text: 'As you start using Toll Alert, your phone will ask about your location. Tap ' }, { text: 'While using the app', bold: true }],
+      [{ text: 'When your phone asks about your location, tap ' }, { text: 'While using the app', bold: true }],
       [
         { text: 'Your phone opens Settings. Tap ' },
         { text: 'Permissions', bold: true },
