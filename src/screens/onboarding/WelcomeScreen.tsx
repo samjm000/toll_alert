@@ -5,7 +5,7 @@ import { FinesTotalBox } from '../../components/FinesTotalBox';
 import { LanguageButton } from '../../components/LanguagePicker';
 import { Logo } from '../../components/Logo';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { SUBSCRIPTIONS_ENABLED } from '../../config/release';
+import { LANGUAGES_ENABLED, SUBSCRIPTIONS_ENABLED } from '../../config/release';
 import { useLanguage } from '../../i18n';
 import { colors, spacing } from '../../theme';
 import { OnboardingStackParamList } from '../../navigation/types';
@@ -29,7 +29,7 @@ export function WelcomeScreen({ navigation }: Props) {
     <View style={styles.root}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scroll} bounces={false}>
         <SafeAreaView edges={['top']} style={styles.topRow}>
-          <LanguageButton />
+          {LANGUAGES_ENABLED ? <LanguageButton /> : <View />}
           <View style={styles.progressDots}>
             <View style={[styles.progressDot, styles.progressDotActive]} />
             <View style={styles.progressDot} />

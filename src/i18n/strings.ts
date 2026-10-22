@@ -185,12 +185,17 @@ const en: Strings = {
   disclaimer: {
     title: 'Before you continue',
     text:
-      'This app is a reminder tool, not a guarantee. Your phone must be in the vehicle for the alert to be received. ' +
-      'Detection can fail — GPS can lose signal (e.g. in tunnels), notifications can be delayed or silenced by your ' +
-      'phone’s operating system, and background processes can be stopped by the OS to save battery. You are fully ' +
-      'responsible for paying your own tolls and charges regardless of whether you receive an alert from this app.',
+      'Toll Alert is a reminder tool only. It is provided "as is", with no guarantee that it will detect every ' +
+      'crossing or that any alert or reminder will reach you. Your phone must be in the vehicle for the alert to be ' +
+      'received. Detection can fail — GPS can lose signal (e.g. in tunnels), notifications can be delayed or ' +
+      'silenced by your phone’s operating system, and your phone can stop the app to save battery. Toll and charge ' +
+      'details can change and may be out of date.\n\n' +
+      'You alone are responsible for paying every toll, charge and penalty that applies to your journeys. To the ' +
+      'fullest extent permitted by law, Toll Alert and the people behind it accept no responsibility or liability ' +
+      'for any unpaid toll or charge, fine, penalty charge notice, or any other loss — whether or not you received ' +
+      'an alert.',
     checkbox:
-      'I understand this app is a reminder only, and that paying tolls and charges is my responsibility.',
+      'I understand Toll Alert is a reminder only, that paying all tolls, charges and fines is my responsibility, and that Toll Alert accepts no responsibility if I miss one.',
     understand: 'I understand',
   },
   permissions: {

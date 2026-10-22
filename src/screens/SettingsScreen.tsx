@@ -12,7 +12,7 @@ import { StatusPill } from '../components/StatusPill';
 import { colors, radii, spacing } from '../theme';
 import { RootStackParamList } from '../navigation/types';
 import { MOCK_CROSSINGS_CONFIG } from '../config/crossings';
-import { PRIVACY_POLICY_URL, SHOW_DEMO_TOOLS, SUBSCRIPTIONS_ENABLED } from '../config/release';
+import { LANGUAGES_ENABLED, PRIVACY_POLICY_URL, SHOW_DEMO_TOOLS, SUBSCRIPTIONS_ENABLED } from '../config/release';
 import { requestIgnoreBatteryOptimizations } from '../geofencing/batteryOptimization';
 import { geofencing } from '../geofencing';
 import { EngineStatus } from '../geofencing/types';
@@ -98,11 +98,13 @@ export function SettingsScreen({ navigation }: Props) {
           </View>
         )}
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🌐 {strings.settings.language}</Text>
-          <Text style={styles.sectionCaption}>{strings.settings.languageCaption}</Text>
-          <LanguageButton />
-        </View>
+        {LANGUAGES_ENABLED && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>🌐 {strings.settings.language}</Text>
+            <Text style={styles.sectionCaption}>{strings.settings.languageCaption}</Text>
+            <LanguageButton />
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Monitored crossings</Text>

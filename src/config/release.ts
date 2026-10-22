@@ -12,6 +12,11 @@ export const SUBSCRIPTIONS_ENABLED = false;
 // a store build); off in the Android and iOS store builds.
 export const SHOW_DEMO_TOOLS = __DEV__ || Platform.OS === 'web';
 
+// English only for launch (2026-10-22): the other five languages were
+// machine-drafted and haven't been checked by native speakers. Their strings
+// stay in src/i18n/strings.ts; set this to true to bring back the picker.
+export const LANGUAGES_ENABLED = false;
+
 // Store listings for the website's "PRESS TO DOWNLOAD FREE" button. While
 // null, the button says the app is coming soon; fill in when the listing is live.
 export const PLAY_STORE_URL: string | null = null;

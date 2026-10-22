@@ -978,3 +978,8 @@ with Settings → Diagnostics → Share log), car-rental QR partnerships.
 - "TOLLS WE COVER" is its own page 2 (`TollsCoveredScreen`; on the landing page it sat behind GET STARTED on a phone) — every crossing by name, no prices,
   read from `crossings.ts` so new tolls appear automatically. The per-scheme fines cards used to
   name them; this puts the names back. Order: landing → tolls → alert preview → How it works.
+- 2026-10-22, pre-ship: disclaimer (English) rewritten to say Toll Alert accepts no responsibility
+  or liability for missed tolls, fines or other loss, "to the fullest extent permitted by law" —
+  Sam's call; not solicitor-reviewed. App and website are English only (`LANGUAGES_ENABLED = false`
+  in `src/config/release.ts`): no language picker, stored/device languages ignored. The other five
+  languages stay in `strings.ts` with the OLD disclaimer — update it before switching them back on.

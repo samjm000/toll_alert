@@ -11,14 +11,13 @@ import { OnboardingStackParamList } from '../../navigation/types';
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'Disclaimer'>;
 
 /**
- * PLACEHOLDER LEGAL COPY — not final. The text lives in src/i18n/strings.ts
- * (`disclaimer`), in every language the app offers.
- * This wording must be reviewed and signed off by a solicitor before this
- * screen ships to production, and each translation checked by a native
- * speaker. Do not treat this text as legal advice.
+ * The text lives in src/i18n/strings.ts (`disclaimer`).
  *
- * Client review (2026-09-24, via Rob): keep as it is, but say that the phone
- * must be in the vehicle for the alert to be received.
+ * Client review (2026-09-24, via Rob): say that the phone must be in the
+ * vehicle for the alert to be received. Sam (2026-10-22): make it say plainly
+ * that Toll Alert takes no responsibility. The English version was rewritten
+ * to do that; it has not been reviewed by a solicitor. The other languages
+ * still carry the older wording and are switched off (LANGUAGES_ENABLED).
  */
 
 export function DisclaimerScreen({ navigation }: Props) {

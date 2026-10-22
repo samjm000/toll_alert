@@ -1,4 +1,5 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { LANGUAGES_ENABLED } from '../config/release';
 import { loadLanguageCode, saveLanguageCode } from '../state/persistence';
 import { isLanguageCode, LanguageCode, Strings, STRINGS } from './strings';
 
@@ -11,6 +12,7 @@ export { LANGUAGE_CODES, STRINGS } from './strings';
  * platforms, and a wrong guess here only costs one tap in the picker.
  */
 export function deviceLanguage(): LanguageCode {
+  if (!LANGUAGES_ENABLED) return 'en';
   try {
     const base = Intl.DateTimeFormat().resolvedOptions().locale.split('-')[0].toLowerCase();
     return isLanguageCode(base) ? base : 'en';
@@ -24,6 +26,7 @@ export function deviceLanguage(): LanguageCode {
  * are written from a headless background task with no provider mounted.
  */
 export async function loadLanguage(): Promise<LanguageCode> {
+  if (!LANGUAGES_ENABLED) return 'en';
   const stored = await loadLanguageCode();
   return isLanguageCode(stored) ? stored : deviceLanguage();
 }
