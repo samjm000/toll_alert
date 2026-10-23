@@ -16,7 +16,9 @@ type Props = NativeStackScreenProps<OnboardingStackParamList, 'HowItWorks'>;
  * (2026-09-24, via Rob): keep "It detects the crossing" and the "Paid" step
  * as they were; the alert step now says the reminders repeat through the day
  * until paid; and a new step says the link goes to the official payment site,
- * so nobody gets scammed by a copycat one.
+ * so nobody gets scammed by a copycat one. Follow-up (2026-10-23, Rob): step
+ * headings in the brand orange, descriptions in white, and AVOID THE TOLL
+ * FINES centred and a size larger.
  */
 export function HowItWorksScreen({ navigation }: Props) {
   const { t } = useLanguage();
@@ -69,10 +71,11 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   avoidFines: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: '900',
     color: colors.primary,
     letterSpacing: 0.5,
+    textAlign: 'center',
     marginBottom: spacing.sm,
   },
   card: {
@@ -100,12 +103,12 @@ const styles = StyleSheet.create({
   },
   stepTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: colors.text,
+    fontWeight: '800',
+    color: colors.primary,
   },
   stepBody: {
     fontSize: 14,
-    color: colors.textMuted,
+    color: colors.text,
     lineHeight: 20,
   },
 });
